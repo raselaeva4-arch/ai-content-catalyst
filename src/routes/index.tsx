@@ -1,8 +1,8 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast, Toaster } from "sonner";
-import { Sparkles, Link2, Upload, BookOpen, Trash2, Plus, Loader2, TrendingUp, Hash, FileText, Lightbulb, Tag, Mic, CheckCircle2 } from "lucide-react";
+import { Sparkles, Link2, Upload, BookOpen, Trash2, Plus, Loader2, TrendingUp, Hash, FileText, Lightbulb, Tag, Mic, CheckCircle2, Save, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,7 @@ import { analyzeContent } from "@/lib/analysis.functions";
 import { getTrends } from "@/lib/trends.functions";
 import { listKb, saveKb, deleteKb } from "@/lib/kb.functions";
 import { transcribeMedia } from "@/lib/transcribe.functions";
+import { saveHistory } from "@/lib/history.functions";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -49,6 +50,9 @@ function Dashboard() {
   const saveKbFn = useServerFn(saveKb);
   const deleteKbFn = useServerFn(deleteKb);
   const transcribeFn = useServerFn(transcribeMedia);
+  const saveFn = useServerFn(saveHistory);
+  const [saving, setSaving] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
 
   const [urls, setUrls] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
@@ -108,7 +112,7 @@ function Dashboard() {
       toast.error("Tunggu sampai transkrip video/audio selesai.");
       return;
     }
-    setAnalyzing(true); setResult(null); setTrendData(null);
+    setAnalyzing(true); setResult(null); setTrendData(null); setSavedId(null);
     try {
       // Inject transcripts into notes so AI sees them
       const transcriptBlock = files
@@ -133,6 +137,29 @@ function Dashboard() {
     } finally { setAnalyzing(false); }
   }, [urls, files, notes, analyze, trends]);
 
+  const onSave = useCallback(async () => {
+    if (!result) return;
+    setSaving(true);
+    try {
+      const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
+      const res = await saveFn({ data: {
+        title: result.article_titles[0] ?? result.summary.slice(0, 80) ?? "Untitled",
+        category: result.category,
+        summary: result.summary,
+        main_keywords: result.main_keywords,
+        secondary_keywords: result.secondary_keywords,
+        article_titles: result.article_titles,
+        extracted: result.extracted,
+        notes: notes || null,
+        source_inputs: { urls: cleanUrls, files: files.map((f) => f.name) },
+      } });
+      setSavedId(res.item.id);
+      toast.success("Tersimpan ke History");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally { setSaving(false); }
+  }, [result, urls, files, notes, saveFn]);
+
   return (
     <div className="min-h-screen bg-background">
       <Toaster richColors position="top-right" />
@@ -149,7 +176,12 @@ function Dashboard() {
               <p className="text-xs text-muted-foreground">AI Keyword & Content Strategy</p>
             </div>
           </div>
-          <Badge variant="secondary" className="font-mono text-xs">v0.1 MVP</Badge>
+          <div className="flex items-center gap-2">
+            <Link to="/history">
+              <Button variant="outline" size="sm"><History className="size-3.5 mr-1.5" />History</Button>
+            </Link>
+            <Badge variant="secondary" className="font-mono text-xs">v0.1 MVP</Badge>
+          </div>
         </div>
       </header>
 
@@ -255,7 +287,7 @@ function Dashboard() {
             </Button>
           </Card>
 
-          {result && <ResultsPanel result={result} trends={trendData} loadingTrends={loadingTrends} />}
+          {result && <ResultsPanel result={result} trends={trendData} loadingTrends={loadingTrends} onSave={onSave} saving={saving} savedId={savedId} />}
         </div>
 
         {/* Right: Knowledge Base */}
@@ -275,7 +307,7 @@ function Dashboard() {
   );
 }
 
-function ResultsPanel({ result, trends, loadingTrends }: { result: AnalysisResult; trends: TrendRow[] | null; loadingTrends: boolean }) {
+function ResultsPanel({ result, trends, loadingTrends, onSave, saving, savedId }: { result: AnalysisResult; trends: TrendRow[] | null; loadingTrends: boolean; onSave: () => Promise<void>; saving: boolean; savedId: string | null }) {
   const trendFor = (kw: string) => trends?.find((t) => t.keyword === kw);
   return (
     <Card className="p-6 shadow-[var(--shadow-elevated)] space-y-6">
@@ -287,7 +319,12 @@ function ResultsPanel({ result, trends, loadingTrends }: { result: AnalysisResul
           </div>
           <p className="text-sm text-muted-foreground">{result.summary}</p>
         </div>
-        <Badge style={{ background: "var(--gradient-brand)", color: "white" }}>{result.category}</Badge>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge style={{ background: "var(--gradient-brand)", color: "white" }}>{result.category}</Badge>
+          <Button size="sm" onClick={onSave} disabled={saving || !!savedId} variant={savedId ? "secondary" : "default"}>
+            {saving ? <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Menyimpan...</> : savedId ? <><CheckCircle2 className="size-3.5 mr-1.5" />Tersimpan</> : <><Save className="size-3.5 mr-1.5" />Simpan</>}
+          </Button>
+        </div>
       </div>
 
       <section>
