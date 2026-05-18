@@ -176,8 +176,12 @@ function Dashboard() {
               <p className="text-xs text-muted-foreground">AI Keyword & Content Strategy</p>
             </div>
           </div>
-          <Badge variant="secondary" className="font-mono text-xs">v0.1 MVP</Badge>
-        </div>
+          <div className="flex items-center gap-2">
+            <Link to="/history">
+              <Button variant="outline" size="sm"><History className="size-3.5 mr-1.5" />History</Button>
+            </Link>
+            <Badge variant="secondary" className="font-mono text-xs">v0.1 MVP</Badge>
+          </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8 grid lg:grid-cols-[1fr_360px] gap-6">
