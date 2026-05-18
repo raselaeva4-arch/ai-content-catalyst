@@ -197,6 +197,7 @@ function Dashboard() {
                   <Upload className="size-6 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm font-medium">Klik untuk upload file</p>
                   <p className="text-xs text-muted-foreground mt-1">Image, PDF, Audio, Video, DOCX, MD, TXT, HTML (max 20MB)</p>
+                  <p className="text-[11px] text-primary mt-1">✨ Video & audio otomatis di-transcribe oleh AI</p>
                   <input
                     type="file"
                     multiple
