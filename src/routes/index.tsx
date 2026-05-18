@@ -287,7 +287,7 @@ function Dashboard() {
             </Button>
           </Card>
 
-          {result && <ResultsPanel result={result} trends={trendData} loadingTrends={loadingTrends} />}
+          {result && <ResultsPanel result={result} trends={trendData} loadingTrends={loadingTrends} onSave={onSave} saving={saving} savedId={savedId} />}
         </div>
 
         {/* Right: Knowledge Base */}
