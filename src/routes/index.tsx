@@ -2,7 +2,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast, Toaster } from "sonner";
-import { Sparkles, Link2, Upload, BookOpen, Trash2, Plus, Loader2, TrendingUp, Hash, FileText, Lightbulb, Tag } from "lucide-react";
+import { Sparkles, Link2, Upload, BookOpen, Trash2, Plus, Loader2, TrendingUp, Hash, FileText, Lightbulb, Tag, Mic, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { analyzeContent } from "@/lib/analysis.functions";
 import { getTrends } from "@/lib/trends.functions";
 import { listKb, saveKb, deleteKb } from "@/lib/kb.functions";
+import { transcribeMedia } from "@/lib/transcribe.functions";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -47,15 +48,28 @@ function Dashboard() {
   const trends = useServerFn(getTrends);
   const saveKbFn = useServerFn(saveKb);
   const deleteKbFn = useServerFn(deleteKb);
+  const transcribeFn = useServerFn(transcribeMedia);
 
   const [urls, setUrls] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
-  const [files, setFiles] = useState<{ path: string; name: string; mime: string }[]>([]);
+  const [files, setFiles] = useState<{ path: string; name: string; mime: string; transcript?: string; transcribing?: boolean }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [trendData, setTrendData] = useState<TrendRow[] | null>(null);
   const [loadingTrends, setLoadingTrends] = useState(false);
+
+  const runTranscribe = useCallback(async (path: string, name: string, mime: string) => {
+    setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcribing: true } : f)));
+    try {
+      const res = await transcribeFn({ data: { path, name, mime } });
+      setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcript: res.transcript, transcribing: false } : f)));
+      toast.success(`Transkrip ${name} selesai`);
+    } catch (e) {
+      setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcribing: false } : f)));
+      toast.error(`Transkrip ${name} gagal: ${(e as Error).message}`);
+    }
+  }, [transcribeFn]);
 
   const onUpload = useCallback(async (fileList: FileList | null) => {
     if (!fileList?.length) return;
@@ -70,12 +84,19 @@ function Dashboard() {
         const path = `${Date.now()}-${Math.random().toString(36).slice(2)}-${f.name}`;
         const { error } = await supabase.storage.from("uploads").upload(path, f);
         if (error) { toast.error(`Gagal upload ${f.name}: ${error.message}`); continue; }
-        uploaded.push({ path, name: f.name, mime: f.type || "application/octet-stream" });
+        const mime = f.type || "application/octet-stream";
+        uploaded.push({ path, name: f.name, mime });
       }
       setFiles((prev) => [...prev, ...uploaded]);
       if (uploaded.length) toast.success(`${uploaded.length} file berhasil diupload`);
+      // Auto-transcribe audio/video
+      for (const u of uploaded) {
+        if (/^(audio|video)\//.test(u.mime)) {
+          void runTranscribe(u.path, u.name, u.mime);
+        }
+      }
     } finally { setUploading(false); }
-  }, []);
+  }, [runTranscribe]);
 
   const onAnalyze = useCallback(async () => {
     const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
@@ -83,9 +104,20 @@ function Dashboard() {
       toast.error("Tambahkan minimal 1 URL, file, atau catatan.");
       return;
     }
+    if (files.some((f) => f.transcribing)) {
+      toast.error("Tunggu sampai transkrip video/audio selesai.");
+      return;
+    }
     setAnalyzing(true); setResult(null); setTrendData(null);
     try {
-      const res = await analyze({ data: { urls: cleanUrls, files, notes } });
+      // Inject transcripts into notes so AI sees them
+      const transcriptBlock = files
+        .filter((f) => f.transcript)
+        .map((f) => `=== TRANSKRIP ${f.name} ===\n${f.transcript}`)
+        .join("\n\n");
+      const mergedNotes = [notes.trim(), transcriptBlock].filter(Boolean).join("\n\n");
+      const payloadFiles = files.map(({ path, name, mime }) => ({ path, name, mime }));
+      const res = await analyze({ data: { urls: cleanUrls, files: payloadFiles, notes: mergedNotes } });
       setResult(res.result);
       toast.success("Analisis selesai!");
       // Auto-fetch trends for main keywords
@@ -165,6 +197,7 @@ function Dashboard() {
                   <Upload className="size-6 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm font-medium">Klik untuk upload file</p>
                   <p className="text-xs text-muted-foreground mt-1">Image, PDF, Audio, Video, DOCX, MD, TXT, HTML (max 20MB)</p>
+                  <p className="text-[11px] text-primary mt-1">✨ Video & audio otomatis di-transcribe oleh AI</p>
                   <input
                     type="file"
                     multiple
@@ -175,14 +208,34 @@ function Dashboard() {
                 </label>
                 {files.length > 0 && (
                   <div className="space-y-1.5">
-                    {files.map((f, i) => (
-                      <div key={i} className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2 text-sm">
-                        <span className="truncate">{f.name}</span>
-                        <Button variant="ghost" size="icon" className="size-7" onClick={() => setFiles((p) => p.filter((_, j) => j !== i))}>
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    ))}
+                    {files.map((f, i) => {
+                      const isMedia = /^(audio|video)\//.test(f.mime);
+                      return (
+                        <div key={i} className="bg-muted/50 rounded-md px-3 py-2 text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {isMedia && <Mic className="size-3.5 shrink-0 text-primary" />}
+                              <span className="truncate">{f.name}</span>
+                              {f.transcribing && (
+                                <Badge variant="secondary" className="text-[10px] gap-1"><Loader2 className="size-2.5 animate-spin" />Transcribing</Badge>
+                              )}
+                              {f.transcript && !f.transcribing && (
+                                <Badge variant="secondary" className="text-[10px] gap-1"><CheckCircle2 className="size-2.5 text-primary" />Transkrip siap</Badge>
+                              )}
+                            </div>
+                            <Button variant="ghost" size="icon" className="size-7" onClick={() => setFiles((p) => p.filter((_, j) => j !== i))}>
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
+                          {f.transcript && (
+                            <details className="mt-2">
+                              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">Lihat transkrip ({f.transcript.length} chars)</summary>
+                              <p className="text-xs mt-1.5 whitespace-pre-wrap text-muted-foreground max-h-40 overflow-y-auto">{f.transcript}</p>
+                            </details>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </TabsContent>
