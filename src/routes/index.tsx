@@ -50,6 +50,9 @@ function Dashboard() {
   const saveKbFn = useServerFn(saveKb);
   const deleteKbFn = useServerFn(deleteKb);
   const transcribeFn = useServerFn(transcribeMedia);
+  const saveFn = useServerFn(saveHistory);
+  const [saving, setSaving] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
 
   const [urls, setUrls] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
