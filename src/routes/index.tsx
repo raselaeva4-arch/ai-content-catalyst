@@ -137,6 +137,29 @@ function Dashboard() {
     } finally { setAnalyzing(false); }
   }, [urls, files, notes, analyze, trends]);
 
+  const onSave = useCallback(async () => {
+    if (!result) return;
+    setSaving(true);
+    try {
+      const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
+      const res = await saveFn({ data: {
+        title: result.article_titles[0] ?? result.summary.slice(0, 80) ?? "Untitled",
+        category: result.category,
+        summary: result.summary,
+        main_keywords: result.main_keywords,
+        secondary_keywords: result.secondary_keywords,
+        article_titles: result.article_titles,
+        extracted: result.extracted,
+        notes: notes || null,
+        source_inputs: { urls: cleanUrls, files: files.map((f) => f.name) },
+      } });
+      setSavedId(res.item.id);
+      toast.success("Tersimpan ke History");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally { setSaving(false); }
+  }, [result, urls, files, notes, saveFn]);
+
   return (
     <div className="min-h-screen bg-background">
       <Toaster richColors position="top-right" />
