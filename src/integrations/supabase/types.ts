@@ -68,6 +68,51 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_generations: {
+        Row: {
+          article_titles: Json
+          category: string | null
+          created_at: string
+          extracted: Json
+          id: string
+          main_keywords: Json
+          notes: string | null
+          secondary_keywords: Json
+          source_inputs: Json
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          article_titles?: Json
+          category?: string | null
+          created_at?: string
+          extracted?: Json
+          id?: string
+          main_keywords?: Json
+          notes?: string | null
+          secondary_keywords?: Json
+          source_inputs?: Json
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          article_titles?: Json
+          category?: string | null
+          created_at?: string
+          extracted?: Json
+          id?: string
+          main_keywords?: Json
+          notes?: string | null
+          secondary_keywords?: Json
+          source_inputs?: Json
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
