@@ -112,7 +112,7 @@ function Dashboard() {
       toast.error("Tunggu sampai transkrip video/audio selesai.");
       return;
     }
-    setAnalyzing(true); setResult(null); setTrendData(null);
+    setAnalyzing(true); setResult(null); setTrendData(null); setSavedId(null);
     try {
       // Inject transcripts into notes so AI sees them
       const transcriptBlock = files
