@@ -18,7 +18,7 @@ import { listKb, saveKb, deleteKb } from "@/lib/kb.functions";
 export const Route = createFileRoute("/")({
   component: Dashboard,
   loader: async () => {
-    const [kb, _] = await Promise.all([listKb()]);
+    const kb = await listKb();
     return { kb: kb.items };
   },
   head: () => ({
