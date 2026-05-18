@@ -307,7 +307,7 @@ function Dashboard() {
   );
 }
 
-function ResultsPanel({ result, trends, loadingTrends }: { result: AnalysisResult; trends: TrendRow[] | null; loadingTrends: boolean }) {
+function ResultsPanel({ result, trends, loadingTrends, onSave, saving, savedId }: { result: AnalysisResult; trends: TrendRow[] | null; loadingTrends: boolean; onSave: () => Promise<void>; saving: boolean; savedId: string | null }) {
   const trendFor = (kw: string) => trends?.find((t) => t.keyword === kw);
   return (
     <Card className="p-6 shadow-[var(--shadow-elevated)] space-y-6">
@@ -319,7 +319,12 @@ function ResultsPanel({ result, trends, loadingTrends }: { result: AnalysisResul
           </div>
           <p className="text-sm text-muted-foreground">{result.summary}</p>
         </div>
-        <Badge style={{ background: "var(--gradient-brand)", color: "white" }}>{result.category}</Badge>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge style={{ background: "var(--gradient-brand)", color: "white" }}>{result.category}</Badge>
+          <Button size="sm" onClick={onSave} disabled={saving || !!savedId} variant={savedId ? "secondary" : "default"}>
+            {saving ? <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Menyimpan...</> : savedId ? <><CheckCircle2 className="size-3.5 mr-1.5" />Tersimpan</> : <><Save className="size-3.5 mr-1.5" />Simpan</>}
+          </Button>
+        </div>
       </div>
 
       <section>
