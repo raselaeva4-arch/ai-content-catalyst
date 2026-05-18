@@ -207,14 +207,34 @@ function Dashboard() {
                 </label>
                 {files.length > 0 && (
                   <div className="space-y-1.5">
-                    {files.map((f, i) => (
-                      <div key={i} className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2 text-sm">
-                        <span className="truncate">{f.name}</span>
-                        <Button variant="ghost" size="icon" className="size-7" onClick={() => setFiles((p) => p.filter((_, j) => j !== i))}>
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    ))}
+                    {files.map((f, i) => {
+                      const isMedia = /^(audio|video)\//.test(f.mime);
+                      return (
+                        <div key={i} className="bg-muted/50 rounded-md px-3 py-2 text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {isMedia && <Mic className="size-3.5 shrink-0 text-primary" />}
+                              <span className="truncate">{f.name}</span>
+                              {f.transcribing && (
+                                <Badge variant="secondary" className="text-[10px] gap-1"><Loader2 className="size-2.5 animate-spin" />Transcribing</Badge>
+                              )}
+                              {f.transcript && !f.transcribing && (
+                                <Badge variant="secondary" className="text-[10px] gap-1"><CheckCircle2 className="size-2.5 text-primary" />Transkrip siap</Badge>
+                              )}
+                            </div>
+                            <Button variant="ghost" size="icon" className="size-7" onClick={() => setFiles((p) => p.filter((_, j) => j !== i))}>
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
+                          {f.transcript && (
+                            <details className="mt-2">
+                              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">Lihat transkrip ({f.transcript.length} chars)</summary>
+                              <p className="text-xs mt-1.5 whitespace-pre-wrap text-muted-foreground max-h-40 overflow-y-auto">{f.transcript}</p>
+                            </details>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </TabsContent>
