@@ -48,15 +48,28 @@ function Dashboard() {
   const trends = useServerFn(getTrends);
   const saveKbFn = useServerFn(saveKb);
   const deleteKbFn = useServerFn(deleteKb);
+  const transcribeFn = useServerFn(transcribeMedia);
 
   const [urls, setUrls] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
-  const [files, setFiles] = useState<{ path: string; name: string; mime: string }[]>([]);
+  const [files, setFiles] = useState<{ path: string; name: string; mime: string; transcript?: string; transcribing?: boolean }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [trendData, setTrendData] = useState<TrendRow[] | null>(null);
   const [loadingTrends, setLoadingTrends] = useState(false);
+
+  const runTranscribe = useCallback(async (path: string, name: string, mime: string) => {
+    setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcribing: true } : f)));
+    try {
+      const res = await transcribeFn({ data: { path, name, mime } });
+      setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcript: res.transcript, transcribing: false } : f)));
+      toast.success(`Transkrip ${name} selesai`);
+    } catch (e) {
+      setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcribing: false } : f)));
+      toast.error(`Transkrip ${name} gagal: ${(e as Error).message}`);
+    }
+  }, [transcribeFn]);
 
   const onUpload = useCallback(async (fileList: FileList | null) => {
     if (!fileList?.length) return;
@@ -71,12 +84,19 @@ function Dashboard() {
         const path = `${Date.now()}-${Math.random().toString(36).slice(2)}-${f.name}`;
         const { error } = await supabase.storage.from("uploads").upload(path, f);
         if (error) { toast.error(`Gagal upload ${f.name}: ${error.message}`); continue; }
-        uploaded.push({ path, name: f.name, mime: f.type || "application/octet-stream" });
+        const mime = f.type || "application/octet-stream";
+        uploaded.push({ path, name: f.name, mime });
       }
       setFiles((prev) => [...prev, ...uploaded]);
       if (uploaded.length) toast.success(`${uploaded.length} file berhasil diupload`);
+      // Auto-transcribe audio/video
+      for (const u of uploaded) {
+        if (/^(audio|video)\//.test(u.mime)) {
+          void runTranscribe(u.path, u.name, u.mime);
+        }
+      }
     } finally { setUploading(false); }
-  }, []);
+  }, [runTranscribe]);
 
   const onAnalyze = useCallback(async () => {
     const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
@@ -84,9 +104,20 @@ function Dashboard() {
       toast.error("Tambahkan minimal 1 URL, file, atau catatan.");
       return;
     }
+    if (files.some((f) => f.transcribing)) {
+      toast.error("Tunggu sampai transkrip video/audio selesai.");
+      return;
+    }
     setAnalyzing(true); setResult(null); setTrendData(null);
     try {
-      const res = await analyze({ data: { urls: cleanUrls, files, notes } });
+      // Inject transcripts into notes so AI sees them
+      const transcriptBlock = files
+        .filter((f) => f.transcript)
+        .map((f) => `=== TRANSKRIP ${f.name} ===\n${f.transcript}`)
+        .join("\n\n");
+      const mergedNotes = [notes.trim(), transcriptBlock].filter(Boolean).join("\n\n");
+      const payloadFiles = files.map(({ path, name, mime }) => ({ path, name, mime }));
+      const res = await analyze({ data: { urls: cleanUrls, files: payloadFiles, notes: mergedNotes } });
       setResult(res.result);
       toast.success("Analisis selesai!");
       // Auto-fetch trends for main keywords
