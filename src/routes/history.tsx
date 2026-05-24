@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast, Toaster } from "sonner";
-import { ArrowLeft, Pencil, Trash2, Save, X, Sparkles, FileText, Hash, TrendingUp, Calendar } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Save, X, Sparkles, FileText, Hash, TrendingUp, Calendar, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,12 +11,41 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { listHistory, updateHistory, deleteHistory } from "@/lib/history.functions";
 
+function HistoryErrorComponent({ error, reset }: { error: any; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <h1 className="text-xl font-semibold">Terjadi kesalahan</h1>
+        <p className="text-sm text-muted-foreground">{error?.message ?? "Gagal memuat riwayat."}</p>
+        <div className="flex justify-center gap-2">
+          <Button onClick={() => { router.invalidate(); reset(); }}>Coba lagi</Button>
+          <Link to="/"><Button variant="outline">Ke Beranda</Button></Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HistoryNotFoundComponent() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <h1 className="text-xl font-semibold">Halaman tidak ditemukan</h1>
+        <Link to="/"><Button>Kembali ke Beranda</Button></Link>
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/history")({
   component: HistoryPage,
   loader: async () => {
     const res = await listHistory();
     return { items: res.items };
   },
+  errorComponent: HistoryErrorComponent,
+  notFoundComponent: HistoryNotFoundComponent,
   head: () => ({
     meta: [
       { title: "History — KeywordForge" },
@@ -186,6 +215,9 @@ function HistoryCard({ item, editing, onEdit, onCancel, onSave, onDelete }: {
           </div>
         </div>
         <div className="flex gap-1">
+          <Link to="/history/$id" params={{ id: item.id }}>
+            <Button variant="ghost" size="icon" title="Lihat detail"><Eye className="size-4" /></Button>
+          </Link>
           <Button variant="ghost" size="icon" onClick={onEdit}><Pencil className="size-4" /></Button>
           <Button variant="ghost" size="icon" onClick={onDelete}><Trash2 className="size-4 text-destructive" /></Button>
         </div>

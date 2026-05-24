@@ -58,3 +58,15 @@ export const deleteHistory = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const getHistoryById = createServerFn({ method: "GET" })
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { data: row, error } = await supabaseAdmin
+      .from("saved_generations")
+      .select("*")
+      .eq("id", data.id)
+      .single();
+    if (error) throw new Error(error.message);
+    return { item: row };
+  });
