@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast, Toaster } from "sonner";
-import { ArrowLeft, Pencil, Trash2, Save, X, Sparkles, FileText, Hash, TrendingUp, Calendar } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Save, X, Sparkles, FileText, Hash, TrendingUp, Calendar, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
