@@ -186,6 +186,9 @@ function HistoryCard({ item, editing, onEdit, onCancel, onSave, onDelete }: {
           </div>
         </div>
         <div className="flex gap-1">
+          <Link to="/history/$id" params={{ id: item.id }}>
+            <Button variant="ghost" size="icon" title="Lihat detail"><Eye className="size-4" /></Button>
+          </Link>
           <Button variant="ghost" size="icon" onClick={onEdit}><Pencil className="size-4" /></Button>
           <Button variant="ghost" size="icon" onClick={onDelete}><Trash2 className="size-4 text-destructive" /></Button>
         </div>
