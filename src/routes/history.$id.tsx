@@ -8,12 +8,42 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getHistoryById, deleteHistory } from "@/lib/history.functions";
 
+function ErrorComponent({ error, reset }: { error: any; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <h1 className="text-xl font-semibold">Terjadi kesalahan</h1>
+        <p className="text-sm text-muted-foreground">{error?.message ?? "Gagal memuat detail."}</p>
+        <div className="flex justify-center gap-2">
+          <Button onClick={() => { router.invalidate(); reset(); }}>Coba lagi</Button>
+          <Link to="/history"><Button variant="outline">Kembali ke History</Button></Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NotFoundComponent() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <h1 className="text-xl font-semibold">Data tidak ditemukan</h1>
+        <p className="text-sm text-muted-foreground">Riwayat yang Anda cari tidak ada atau sudah dihapus.</p>
+        <Link to="/history"><Button>Kembali ke History</Button></Link>
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/history/$id")({
   component: DetailPage,
   loader: async ({ params }) => {
     const res = await getHistoryById({ data: { id: params.id } });
     return { item: res.item };
   },
+  errorComponent: ErrorComponent,
+  notFoundComponent: NotFoundComponent,
   head: ({ loaderData }) => ({
     meta: [
       { title: `${loaderData?.item?.title ?? "Detail"} — History` },
