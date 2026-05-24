@@ -232,27 +232,27 @@ function DetailPage() {
             <h2 className="font-semibold">Sumber Input</h2>
           </div>
           <div className="space-y-2 text-sm text-muted-foreground">
-            {Array.isArray(sources.urls) && sources.urls.length > 1 && (
+            {Array.isArray(sources.urls) && sources.urls.length > 0 && (
               <div>
                 <span className="font-medium text-foreground">URLs:</span>
-                <ul className="list-disc list-inside mt-1 space-y-0.5">
+                <ul className="list-disc list-inside mt-1 space-y-1">
                   {sources.urls.map((u: string, i: number) => (
                     <li key={i} className="break-all">{u}</li>
                   ))}
                 </ul>
               </div>
             )}
-            {Array.isArray(sources.files) && sources.files.length > 1 && (
+            {Array.isArray(sources.files) && sources.files.length > 0 && (
               <div>
                 <span className="font-medium text-foreground">Files:</span>
-                <ul className="list-disc list-inside mt-1 space-y-0.5">
+                <ul className="list-disc list-inside mt-1 space-y-1">
                   {sources.files.map((f: string, i: number) => (
                     <li key={i}>{f}</li>
                   ))}
                 </ul>
               </div>
             )}
-            {!Array.isArray(sources.urls) && !Array.isArray(sources.files) && (
+            {!(Array.isArray(sources.urls) && sources.urls.length > 0) && !(Array.isArray(sources.files) && sources.files.length > 0) && (
               <span>Tidak ada sumber input tercatat.</span>
             )}
           </div>
