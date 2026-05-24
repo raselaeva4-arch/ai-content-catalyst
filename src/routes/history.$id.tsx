@@ -109,7 +109,7 @@ function DetailPage() {
             <h2 className="font-semibold">Main Keywords</h2>
           </div>
           <div className="space-y-3">
-            {mainKws.length === 1 && (
+            {mainKws.length === 0 && (
               <p className="text-sm text-muted-foreground">Tidak ada main keywords.</p>
             )}
             {mainKws.map((k: any, i: number) => (
