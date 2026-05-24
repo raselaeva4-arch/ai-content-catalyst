@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HistoryIdRouteImport } from './routes/history.$id'
 
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
@@ -22,31 +23,39 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistoryIdRoute = HistoryIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => HistoryRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/history': typeof HistoryRoute
+  '/history': typeof HistoryRouteWithChildren
+  '/history/$id': typeof HistoryIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/history': typeof HistoryRoute
+  '/history': typeof HistoryRouteWithChildren
+  '/history/$id': typeof HistoryIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/history': typeof HistoryRoute
+  '/history': typeof HistoryRouteWithChildren
+  '/history/$id': typeof HistoryIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/history'
+  fullPaths: '/' | '/history' | '/history/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/history'
-  id: '__root__' | '/' | '/history'
+  to: '/' | '/history' | '/history/$id'
+  id: '__root__' | '/' | '/history' | '/history/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  HistoryRoute: typeof HistoryRoute
+  HistoryRoute: typeof HistoryRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +74,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/history/$id': {
+      id: '/history/$id'
+      path: '/$id'
+      fullPath: '/history/$id'
+      preLoaderRoute: typeof HistoryIdRouteImport
+      parentRoute: typeof HistoryRoute
+    }
   }
 }
 
+interface HistoryRouteChildren {
+  HistoryIdRoute: typeof HistoryIdRoute
+}
+
+const HistoryRouteChildren: HistoryRouteChildren = {
+  HistoryIdRoute: HistoryIdRoute,
+}
+
+const HistoryRouteWithChildren =
+  HistoryRoute._addFileChildren(HistoryRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  HistoryRoute: HistoryRoute,
+  HistoryRoute: HistoryRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
