@@ -251,6 +251,33 @@ function Dashboard() {
                 </p>
               </TabsContent>
 
+              <TabsContent value="reel" className="mt-4 space-y-3">
+                <div className="rounded-lg border bg-accent/20 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Video className="size-4 text-primary" />
+                    <p className="text-sm font-medium">Extract Transcript dari Video</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Paste link <strong>TikTok</strong> atau <strong>Instagram Reels</strong> publik. AI akan otomatis download videonya & transcribe speech-nya ke teks.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://www.tiktok.com/@user/video/... atau https://www.instagram.com/reel/..."
+                    value={reelUrl}
+                    onChange={(e) => setReelUrl(e.target.value)}
+                    disabled={reelLoading}
+                  />
+                  <Button onClick={onReelTranscribe} disabled={reelLoading || !reelUrl.trim()}>
+                    {reelLoading ? <><Loader2 className="size-4 mr-1.5 animate-spin" />Extracting...</> : <><Mic className="size-4 mr-1.5" />Extract</>}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Hasil transkrip akan masuk ke daftar Files dan otomatis ikut dianalisis. Reel private/login-only tidak didukung.
+                </p>
+              </TabsContent>
+
+
               <TabsContent value="files" className="mt-4 space-y-3">
                 <label className="block border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-accent/30 transition-colors">
                   <Upload className="size-6 mx-auto mb-2 text-muted-foreground" />
