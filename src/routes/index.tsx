@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast, Toaster } from "sonner";
-import { Sparkles, Link2, Upload, BookOpen, Trash2, Plus, Loader2, TrendingUp, Hash, FileText, Lightbulb, Tag, Mic, CheckCircle2, Save, History } from "lucide-react";
+import { Sparkles, Link2, Upload, BookOpen, Trash2, Plus, Loader2, TrendingUp, Hash, FileText, Lightbulb, Tag, Mic, CheckCircle2, Save, History, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,7 @@ import { analyzeContent } from "@/lib/analysis.functions";
 import { getTrends } from "@/lib/trends.functions";
 import { listKb, saveKb, deleteKb } from "@/lib/kb.functions";
 import { transcribeMedia } from "@/lib/transcribe.functions";
+import { transcribeUrl } from "@/lib/transcribe-url.functions";
 import { saveHistory } from "@/lib/history.functions";
 
 export const Route = createFileRoute("/")({
@@ -50,9 +51,12 @@ function Dashboard() {
   const saveKbFn = useServerFn(saveKb);
   const deleteKbFn = useServerFn(deleteKb);
   const transcribeFn = useServerFn(transcribeMedia);
+  const transcribeUrlFn = useServerFn(transcribeUrl);
   const saveFn = useServerFn(saveHistory);
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [reelUrl, setReelUrl] = useState("");
+  const [reelLoading, setReelLoading] = useState(false);
 
   const [urls, setUrls] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
@@ -102,6 +106,28 @@ function Dashboard() {
     } finally { setUploading(false); }
   }, [runTranscribe]);
 
+  const onReelTranscribe = useCallback(async () => {
+    const u = reelUrl.trim();
+    if (!u) { toast.error("Paste link TikTok atau Instagram Reels dulu."); return; }
+    setReelLoading(true);
+    try {
+      const res = await transcribeUrlFn({ data: { url: u } });
+      setFiles((prev) => [
+        ...prev,
+        {
+          path: `url:${res.sourceUrl}`,
+          name: res.name,
+          mime: `video/${res.platform}`,
+          transcript: res.transcript,
+        },
+      ]);
+      setReelUrl("");
+      toast.success(`Transkrip dari ${res.platform} berhasil!`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally { setReelLoading(false); }
+  }, [reelUrl, transcribeUrlFn]);
+
   const onAnalyze = useCallback(async () => {
     const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
     if (!cleanUrls.length && !files.length && !notes.trim()) {
@@ -120,7 +146,7 @@ function Dashboard() {
         .map((f) => `=== TRANSKRIP ${f.name} ===\n${f.transcript}`)
         .join("\n\n");
       const mergedNotes = [notes.trim(), transcriptBlock].filter(Boolean).join("\n\n");
-      const payloadFiles = files.map(({ path, name, mime }) => ({ path, name, mime }));
+      const payloadFiles = files.filter((f) => !f.path.startsWith("url:")).map(({ path, name, mime }) => ({ path, name, mime }));
       const res = await analyze({ data: { urls: cleanUrls, files: payloadFiles, notes: mergedNotes } });
       setResult(res.result);
       toast.success("Analisis selesai!");
@@ -195,8 +221,9 @@ function Dashboard() {
             </div>
 
             <Tabs defaultValue="urls">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="urls"><Link2 className="size-3.5 mr-1.5" />Links</TabsTrigger>
+                <TabsTrigger value="reel"><Video className="size-3.5 mr-1.5" />Reel/TikTok</TabsTrigger>
                 <TabsTrigger value="files"><Upload className="size-3.5 mr-1.5" />Files</TabsTrigger>
                 <TabsTrigger value="notes"><FileText className="size-3.5 mr-1.5" />Notes</TabsTrigger>
               </TabsList>
@@ -223,6 +250,33 @@ function Dashboard() {
                   Tip: IG/TikTok mungkin terbatas karena anti-scraping. Untuk hasil terbaik, paste caption manual di tab Notes.
                 </p>
               </TabsContent>
+
+              <TabsContent value="reel" className="mt-4 space-y-3">
+                <div className="rounded-lg border bg-accent/20 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Video className="size-4 text-primary" />
+                    <p className="text-sm font-medium">Extract Transcript dari Video</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Paste link <strong>TikTok</strong> atau <strong>Instagram Reels</strong> publik. AI akan otomatis download videonya & transcribe speech-nya ke teks.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://www.tiktok.com/@user/video/... atau https://www.instagram.com/reel/..."
+                    value={reelUrl}
+                    onChange={(e) => setReelUrl(e.target.value)}
+                    disabled={reelLoading}
+                  />
+                  <Button onClick={onReelTranscribe} disabled={reelLoading || !reelUrl.trim()}>
+                    {reelLoading ? <><Loader2 className="size-4 mr-1.5 animate-spin" />Extracting...</> : <><Mic className="size-4 mr-1.5" />Extract</>}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Hasil transkrip akan masuk ke daftar Files dan otomatis ikut dianalisis. Reel private/login-only tidak didukung.
+                </p>
+              </TabsContent>
+
 
               <TabsContent value="files" className="mt-4 space-y-3">
                 <label className="block border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-accent/30 transition-colors">
