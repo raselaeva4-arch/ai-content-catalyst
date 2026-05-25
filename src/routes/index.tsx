@@ -17,6 +17,7 @@ import { listKb, saveKb, deleteKb } from "@/lib/kb.functions";
 import { transcribeMedia } from "@/lib/transcribe.functions";
 import { transcribeUrl } from "@/lib/transcribe-url.functions";
 import { saveHistory } from "@/lib/history.functions";
+import { createTranscript } from "@/lib/transcripts.functions";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -53,6 +54,7 @@ function Dashboard() {
   const transcribeFn = useServerFn(transcribeMedia);
   const transcribeUrlFn = useServerFn(transcribeUrl);
   const saveFn = useServerFn(saveHistory);
+  const createTranscriptFn = useServerFn(createTranscript);
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [reelUrl, setReelUrl] = useState("");
@@ -123,10 +125,26 @@ function Dashboard() {
       ]);
       setReelUrl("");
       toast.success(`Transkrip dari ${res.platform} berhasil!`);
+      // Auto-save to DB
+      try {
+        await createTranscriptFn({
+          data: {
+            title: res.name,
+            source_type: "url",
+            source_url: res.sourceUrl,
+            platform: res.platform,
+            mime: `video/${res.platform}`,
+            transcript: res.transcript,
+          },
+        });
+        toast.success("Tersimpan ke Transcripts.");
+      } catch (e) {
+        toast.warning("Transkrip tidak otomatis tersimpan: " + (e as Error).message);
+      }
     } catch (e) {
       toast.error((e as Error).message);
     } finally { setReelLoading(false); }
-  }, [reelUrl, transcribeUrlFn]);
+  }, [reelUrl, transcribeUrlFn, createTranscriptFn]);
 
   const onAnalyze = useCallback(async () => {
     const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
@@ -203,6 +221,9 @@ function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/transcripts">
+              <Button variant="outline" size="sm"><Mic className="size-3.5 mr-1.5" />Transcripts</Button>
+            </Link>
             <Link to="/history">
               <Button variant="outline" size="sm"><History className="size-3.5 mr-1.5" />History</Button>
             </Link>
