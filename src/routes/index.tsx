@@ -146,7 +146,7 @@ function Dashboard() {
         .map((f) => `=== TRANSKRIP ${f.name} ===\n${f.transcript}`)
         .join("\n\n");
       const mergedNotes = [notes.trim(), transcriptBlock].filter(Boolean).join("\n\n");
-      const payloadFiles = files.map(({ path, name, mime }) => ({ path, name, mime }));
+      const payloadFiles = files.filter((f) => !f.path.startsWith("url:")).map(({ path, name, mime }) => ({ path, name, mime }));
       const res = await analyze({ data: { urls: cleanUrls, files: payloadFiles, notes: mergedNotes } });
       setResult(res.result);
       toast.success("Analisis selesai!");
