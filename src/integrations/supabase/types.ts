@@ -113,6 +113,48 @@ export type Database = {
         }
         Relationships: []
       }
+      transcripts: {
+        Row: {
+          created_at: string
+          id: string
+          mime: string | null
+          notes: string | null
+          platform: string | null
+          source_path: string | null
+          source_type: string
+          source_url: string | null
+          title: string
+          transcript: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mime?: string | null
+          notes?: string | null
+          platform?: string | null
+          source_path?: string | null
+          source_type?: string
+          source_url?: string | null
+          title: string
+          transcript?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mime?: string | null
+          notes?: string | null
+          platform?: string | null
+          source_path?: string | null
+          source_type?: string
+          source_url?: string | null
+          title?: string
+          transcript?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
