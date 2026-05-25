@@ -51,9 +51,12 @@ function Dashboard() {
   const saveKbFn = useServerFn(saveKb);
   const deleteKbFn = useServerFn(deleteKb);
   const transcribeFn = useServerFn(transcribeMedia);
+  const transcribeUrlFn = useServerFn(transcribeUrl);
   const saveFn = useServerFn(saveHistory);
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [reelUrl, setReelUrl] = useState("");
+  const [reelLoading, setReelLoading] = useState(false);
 
   const [urls, setUrls] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
