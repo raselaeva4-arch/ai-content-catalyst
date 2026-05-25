@@ -106,6 +106,28 @@ function Dashboard() {
     } finally { setUploading(false); }
   }, [runTranscribe]);
 
+  const onReelTranscribe = useCallback(async () => {
+    const u = reelUrl.trim();
+    if (!u) { toast.error("Paste link TikTok atau Instagram Reels dulu."); return; }
+    setReelLoading(true);
+    try {
+      const res = await transcribeUrlFn({ data: { url: u } });
+      setFiles((prev) => [
+        ...prev,
+        {
+          path: `url:${res.sourceUrl}`,
+          name: res.name,
+          mime: `video/${res.platform}`,
+          transcript: res.transcript,
+        },
+      ]);
+      setReelUrl("");
+      toast.success(`Transkrip dari ${res.platform} berhasil!`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally { setReelLoading(false); }
+  }, [reelUrl, transcribeUrlFn]);
+
   const onAnalyze = useCallback(async () => {
     const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
     if (!cleanUrls.length && !files.length && !notes.trim()) {
