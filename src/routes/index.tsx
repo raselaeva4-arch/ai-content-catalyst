@@ -62,12 +62,36 @@ function Dashboard() {
 
   const [urls, setUrls] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
-  const [files, setFiles] = useState<{ path: string; name: string; mime: string; transcript?: string; transcribing?: boolean }[]>([]);
+  const [files, setFiles] = useState<{ path: string; name: string; mime: string; transcript?: string; transcribing?: boolean; transcriptId?: string; saving?: boolean }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [trendData, setTrendData] = useState<TrendRow[] | null>(null);
   const [loadingTrends, setLoadingTrends] = useState(false);
+
+  const saveFileTranscript = useCallback(async (path: string) => {
+    const target = files.find((f) => f.path === path) ?? null;
+    setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, saving: true } : f)));
+    try {
+      const f = target ?? (await new Promise<typeof files[number] | undefined>((r) => setFiles((p) => { r(p.find((x) => x.path === path)); return p; })));
+      if (!f || !f.transcript) throw new Error("Belum ada transkrip");
+      const res = await createTranscriptFn({
+        data: {
+          title: f.name,
+          source_type: "file",
+          source_path: f.path,
+          platform: f.mime.split("/")[0],
+          mime: f.mime,
+          transcript: f.transcript,
+        },
+      });
+      setFiles((prev) => prev.map((x) => (x.path === path ? { ...x, transcriptId: res.item.id, saving: false } : x)));
+      toast.success(`"${f.name}" tersimpan ke Transcripts`);
+    } catch (e) {
+      setFiles((prev) => prev.map((x) => (x.path === path ? { ...x, saving: false } : x)));
+      toast.error("Gagal simpan transkrip: " + (e as Error).message);
+    }
+  }, [files, createTranscriptFn]);
 
   const runTranscribe = useCallback(async (path: string, name: string, mime: string) => {
     setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcribing: true } : f)));
@@ -75,11 +99,27 @@ function Dashboard() {
       const res = await transcribeFn({ data: { path, name, mime } });
       setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcript: res.transcript, transcribing: false } : f)));
       toast.success(`Transkrip ${name} selesai`);
+      // Auto-save ke DB Transcripts
+      try {
+        const saved = await createTranscriptFn({
+          data: {
+            title: name,
+            source_type: "file",
+            source_path: path,
+            platform: mime.split("/")[0],
+            mime,
+            transcript: res.transcript,
+          },
+        });
+        setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcriptId: saved.item.id } : f)));
+      } catch (e) {
+        toast.warning("Transkrip tidak otomatis tersimpan: " + (e as Error).message);
+      }
     } catch (e) {
       setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcribing: false } : f)));
       toast.error(`Transkrip ${name} gagal: ${(e as Error).message}`);
     }
-  }, [transcribeFn]);
+  }, [transcribeFn, createTranscriptFn]);
 
   const onUpload = useCallback(async (fileList: FileList | null) => {
     if (!fileList?.length) return;
@@ -326,13 +366,23 @@ function Dashboard() {
                               {f.transcribing && (
                                 <Badge variant="secondary" className="text-[10px] gap-1"><Loader2 className="size-2.5 animate-spin" />Transcribing</Badge>
                               )}
-                              {f.transcript && !f.transcribing && (
+                              {f.transcript && !f.transcribing && !f.transcriptId && (
                                 <Badge variant="secondary" className="text-[10px] gap-1"><CheckCircle2 className="size-2.5 text-primary" />Transkrip siap</Badge>
                               )}
+                              {f.transcriptId && (
+                                <Badge variant="default" className="text-[10px] gap-1"><Save className="size-2.5" />Tersimpan</Badge>
+                              )}
                             </div>
-                            <Button variant="ghost" size="icon" className="size-7" onClick={() => setFiles((p) => p.filter((_, j) => j !== i))}>
-                              <Trash2 className="size-3.5" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              {f.transcript && !f.transcriptId && (
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={f.saving} onClick={() => saveFileTranscript(f.path)}>
+                                  {f.saving ? <Loader2 className="size-3 animate-spin" /> : <><Save className="size-3 mr-1" />Simpan</>}
+                                </Button>
+                              )}
+                              <Button variant="ghost" size="icon" className="size-7" onClick={() => setFiles((p) => p.filter((_, j) => j !== i))}>
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            </div>
                           </div>
                           {f.transcript && (
                             <details className="mt-2">
