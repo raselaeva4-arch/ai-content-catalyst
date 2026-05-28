@@ -366,13 +366,23 @@ function Dashboard() {
                               {f.transcribing && (
                                 <Badge variant="secondary" className="text-[10px] gap-1"><Loader2 className="size-2.5 animate-spin" />Transcribing</Badge>
                               )}
-                              {f.transcript && !f.transcribing && (
+                              {f.transcript && !f.transcribing && !f.transcriptId && (
                                 <Badge variant="secondary" className="text-[10px] gap-1"><CheckCircle2 className="size-2.5 text-primary" />Transkrip siap</Badge>
                               )}
+                              {f.transcriptId && (
+                                <Badge variant="default" className="text-[10px] gap-1"><Save className="size-2.5" />Tersimpan</Badge>
+                              )}
                             </div>
-                            <Button variant="ghost" size="icon" className="size-7" onClick={() => setFiles((p) => p.filter((_, j) => j !== i))}>
-                              <Trash2 className="size-3.5" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              {f.transcript && !f.transcriptId && (
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={f.saving} onClick={() => saveFileTranscript(f.path)}>
+                                  {f.saving ? <Loader2 className="size-3 animate-spin" /> : <><Save className="size-3 mr-1" />Simpan</>}
+                                </Button>
+                              )}
+                              <Button variant="ghost" size="icon" className="size-7" onClick={() => setFiles((p) => p.filter((_, j) => j !== i))}>
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            </div>
                           </div>
                           {f.transcript && (
                             <details className="mt-2">
