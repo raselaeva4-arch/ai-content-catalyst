@@ -171,7 +171,7 @@ function Dashboard() {
       // Inject transcripts into notes so AI sees them
       const transcriptBlock = files
         .filter((f) => f.transcript)
-        .map((f) => `=== TRANSKRIP ${f.name} ===\n${f.transcript}`)
+        .map((f) => `=== TRANSKRIP ${f.name} ===\n${f.editedTranscript ?? f.transcript}`)
         .join("\n\n");
       const mergedNotes = [notes.trim(), transcriptBlock].filter(Boolean).join("\n\n");
       const payloadFiles = files.filter((f) => !f.path.startsWith("url:")).map(({ path, name, mime }) => ({ path, name, mime }));
