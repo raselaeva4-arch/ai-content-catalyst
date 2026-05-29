@@ -355,10 +355,15 @@ function Dashboard() {
                             </div>
                           </div>
                           {f.transcript && (
-                            <details className="mt-2">
-                              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">Lihat transkrip ({f.transcript.length} chars)</summary>
-                              <p className="text-xs mt-1.5 whitespace-pre-wrap text-muted-foreground max-h-40 overflow-y-auto">{f.transcript}</p>
-                            </details>
+                            <div className="mt-2 space-y-1">
+                              <label className="text-xs text-muted-foreground">Edit transkrip sebelum simpan:</label>
+                              <Textarea
+                                rows={4}
+                                className="text-xs max-h-40"
+                                value={f.editedTranscript ?? f.transcript}
+                                onChange={(e) => setFiles((prev) => prev.map((x) => (x.path === f.path ? { ...x, editedTranscript: e.target.value } : x)))}
+                              />
+                            </div>
                           )}
                         </div>
                       );
