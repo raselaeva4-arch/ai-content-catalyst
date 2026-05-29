@@ -145,7 +145,7 @@ function TranscriptsPage() {
               onKeyDown={(e) => { if (e.key === "Enter") onExtract(); }}
             />
             <Button onClick={onExtract} disabled={extracting || !url.trim()}>
-              {extracting ? <><Loader2 className="size-4 mr-1.5 animate-spin" />Extracting...</> : <><Mic className="size-4 mr-1.5" />Extract & Simpan</>}
+              {extracting ? <><Loader2 className="size-4 mr-1.5 animate-spin" />Extracting...</> : <><Mic className="size-4 mr-1.5" />Extract</>}
             </Button>
           </div>
           <div>
