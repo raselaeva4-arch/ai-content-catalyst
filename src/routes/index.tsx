@@ -98,29 +98,13 @@ function Dashboard() {
     setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcribing: true } : f)));
     try {
       const res = await transcribeFn({ data: { path, name, mime } });
-      setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcript: res.transcript, transcribing: false } : f)));
-      toast.success(`Transkrip ${name} selesai`);
-      // Auto-save ke DB Transcripts
-      try {
-        const saved = await createTranscriptFn({
-          data: {
-            title: name,
-            source_type: "file",
-            source_path: path,
-            platform: mime.split("/")[0],
-            mime,
-            transcript: res.transcript,
-          },
-        });
-        setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcriptId: saved.item.id } : f)));
-      } catch (e) {
-        toast.warning("Transkrip tidak otomatis tersimpan: " + (e as Error).message);
-      }
+      setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcript: res.transcript, editedTranscript: res.transcript, transcribing: false } : f)));
+      toast.success(`Transkrip ${name} selesai — silakan edit sebelum simpan.`);
     } catch (e) {
       setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcribing: false } : f)));
       toast.error(`Transkrip ${name} gagal: ${(e as Error).message}`);
     }
-  }, [transcribeFn, createTranscriptFn]);
+  }, [transcribeFn]);
 
   const onUpload = useCallback(async (fileList: FileList | null) => {
     if (!fileList?.length) return;
