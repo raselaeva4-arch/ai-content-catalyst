@@ -78,25 +78,27 @@ function TranscriptsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
 
+  const [preview, setPreview] = useState<{
+    name: string;
+    sourceUrl: string;
+    platform: string;
+    transcript: string;
+  } | null>(null);
+
   const onExtract = async () => {
     const u = url.trim();
     if (!u) return toast.error("Paste link TikTok atau Instagram Reels dulu.");
     setExtracting(true);
     try {
       const res = await transcribeUrlFn({ data: { url: u } });
-      await createFn({
-        data: {
-          title: res.name,
-          source_type: "url",
-          source_url: res.sourceUrl,
-          platform: res.platform,
-          mime: `video/${res.platform}`,
-          transcript: res.transcript,
-        },
+      setPreview({
+        name: res.name,
+        sourceUrl: res.sourceUrl,
+        platform: res.platform,
+        transcript: res.transcript,
       });
       setUrl("");
-      toast.success(`Transkrip dari ${res.platform} disimpan.`);
-      router.invalidate();
+      toast.success(`Transkrip dari ${res.platform} selesai — silakan edit sebelum simpan.`);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -143,7 +145,7 @@ function TranscriptsPage() {
               onKeyDown={(e) => { if (e.key === "Enter") onExtract(); }}
             />
             <Button onClick={onExtract} disabled={extracting || !url.trim()}>
-              {extracting ? <><Loader2 className="size-4 mr-1.5 animate-spin" />Extracting...</> : <><Mic className="size-4 mr-1.5" />Extract & Simpan</>}
+              {extracting ? <><Loader2 className="size-4 mr-1.5 animate-spin" />Extracting...</> : <><Mic className="size-4 mr-1.5" />Extract</>}
             </Button>
           </div>
           <div>
@@ -163,6 +165,47 @@ function TranscriptsPage() {
                 } catch (e) { toast.error((e as Error).message); }
               }}
             />
+          )}
+          {preview && (
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Pencil className="size-4 text-primary" />
+                <h3 className="font-semibold text-sm">Preview & Edit Transkrip</h3>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Judul</label>
+                <Input value={preview.name} onChange={(e) => setPreview((p) => p ? { ...p, name: e.target.value } : null)} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Transkrip</label>
+                <Textarea rows={8} value={preview.transcript} onChange={(e) => setPreview((p) => p ? { ...p, transcript: e.target.value } : null)} />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="ghost" onClick={() => setPreview(null)}><X className="size-4 mr-1.5" />Batal</Button>
+                <Button
+                  onClick={async () => {
+                    if (!preview) return;
+                    try {
+                      await createFn({
+                        data: {
+                          title: preview.name,
+                          source_type: "url",
+                          source_url: preview.sourceUrl,
+                          platform: preview.platform,
+                          mime: `video/${preview.platform}`,
+                          transcript: preview.transcript,
+                        },
+                      });
+                      toast.success("Transkrip disimpan.");
+                      setPreview(null);
+                      router.invalidate();
+                    } catch (e) { toast.error((e as Error).message); }
+                  }}
+                >
+                  <Save className="size-4 mr-1.5" />Simpan ke Transcripts
+                </Button>
+              </div>
+            </div>
           )}
         </Card>
 

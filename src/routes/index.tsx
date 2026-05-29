@@ -62,7 +62,7 @@ function Dashboard() {
 
   const [urls, setUrls] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
-  const [files, setFiles] = useState<{ path: string; name: string; mime: string; transcript?: string; transcribing?: boolean; transcriptId?: string; saving?: boolean }[]>([]);
+  const [files, setFiles] = useState<{ path: string; name: string; mime: string; transcript?: string; editedTranscript?: string; transcribing?: boolean; transcriptId?: string; saving?: boolean }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -75,6 +75,7 @@ function Dashboard() {
     try {
       const f = target ?? (await new Promise<typeof files[number] | undefined>((r) => setFiles((p) => { r(p.find((x) => x.path === path)); return p; })));
       if (!f || !f.transcript) throw new Error("Belum ada transkrip");
+      const transcriptToSave = f.editedTranscript !== undefined ? f.editedTranscript : f.transcript;
       const res = await createTranscriptFn({
         data: {
           title: f.name,
@@ -82,7 +83,7 @@ function Dashboard() {
           source_path: f.path,
           platform: f.mime.split("/")[0],
           mime: f.mime,
-          transcript: f.transcript,
+          transcript: transcriptToSave,
         },
       });
       setFiles((prev) => prev.map((x) => (x.path === path ? { ...x, transcriptId: res.item.id, saving: false } : x)));
@@ -97,29 +98,13 @@ function Dashboard() {
     setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcribing: true } : f)));
     try {
       const res = await transcribeFn({ data: { path, name, mime } });
-      setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcript: res.transcript, transcribing: false } : f)));
-      toast.success(`Transkrip ${name} selesai`);
-      // Auto-save ke DB Transcripts
-      try {
-        const saved = await createTranscriptFn({
-          data: {
-            title: name,
-            source_type: "file",
-            source_path: path,
-            platform: mime.split("/")[0],
-            mime,
-            transcript: res.transcript,
-          },
-        });
-        setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcriptId: saved.item.id } : f)));
-      } catch (e) {
-        toast.warning("Transkrip tidak otomatis tersimpan: " + (e as Error).message);
-      }
+      setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcript: res.transcript, editedTranscript: res.transcript, transcribing: false } : f)));
+      toast.success(`Transkrip ${name} selesai — silakan edit sebelum simpan.`);
     } catch (e) {
       setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcribing: false } : f)));
       toast.error(`Transkrip ${name} gagal: ${(e as Error).message}`);
     }
-  }, [transcribeFn, createTranscriptFn]);
+  }, [transcribeFn]);
 
   const onUpload = useCallback(async (fileList: FileList | null) => {
     if (!fileList?.length) return;
@@ -161,30 +146,15 @@ function Dashboard() {
           name: res.name,
           mime: `video/${res.platform}`,
           transcript: res.transcript,
+          editedTranscript: res.transcript,
         },
       ]);
       setReelUrl("");
-      toast.success(`Transkrip dari ${res.platform} berhasil!`);
-      // Auto-save to DB
-      try {
-        await createTranscriptFn({
-          data: {
-            title: res.name,
-            source_type: "url",
-            source_url: res.sourceUrl,
-            platform: res.platform,
-            mime: `video/${res.platform}`,
-            transcript: res.transcript,
-          },
-        });
-        toast.success("Tersimpan ke Transcripts.");
-      } catch (e) {
-        toast.warning("Transkrip tidak otomatis tersimpan: " + (e as Error).message);
-      }
+      toast.success(`Transkrip dari ${res.platform} berhasil — silakan edit sebelum simpan.`);
     } catch (e) {
       toast.error((e as Error).message);
     } finally { setReelLoading(false); }
-  }, [reelUrl, transcribeUrlFn, createTranscriptFn]);
+  }, [reelUrl, transcribeUrlFn]);
 
   const onAnalyze = useCallback(async () => {
     const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
@@ -201,7 +171,7 @@ function Dashboard() {
       // Inject transcripts into notes so AI sees them
       const transcriptBlock = files
         .filter((f) => f.transcript)
-        .map((f) => `=== TRANSKRIP ${f.name} ===\n${f.transcript}`)
+        .map((f) => `=== TRANSKRIP ${f.name} ===\n${f.editedTranscript ?? f.transcript}`)
         .join("\n\n");
       const mergedNotes = [notes.trim(), transcriptBlock].filter(Boolean).join("\n\n");
       const payloadFiles = files.filter((f) => !f.path.startsWith("url:")).map(({ path, name, mime }) => ({ path, name, mime }));
@@ -385,10 +355,15 @@ function Dashboard() {
                             </div>
                           </div>
                           {f.transcript && (
-                            <details className="mt-2">
-                              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">Lihat transkrip ({f.transcript.length} chars)</summary>
-                              <p className="text-xs mt-1.5 whitespace-pre-wrap text-muted-foreground max-h-40 overflow-y-auto">{f.transcript}</p>
-                            </details>
+                            <div className="mt-2 space-y-1">
+                              <label className="text-xs text-muted-foreground">Edit transkrip sebelum simpan:</label>
+                              <Textarea
+                                rows={4}
+                                className="text-xs max-h-40"
+                                value={f.editedTranscript ?? f.transcript}
+                                onChange={(e) => setFiles((prev) => prev.map((x) => (x.path === f.path ? { ...x, editedTranscript: e.target.value } : x)))}
+                              />
+                            </div>
                           )}
                         </div>
                       );
