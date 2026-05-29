@@ -78,25 +78,27 @@ function TranscriptsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
 
+  const [preview, setPreview] = useState<{
+    name: string;
+    sourceUrl: string;
+    platform: string;
+    transcript: string;
+  } | null>(null);
+
   const onExtract = async () => {
     const u = url.trim();
     if (!u) return toast.error("Paste link TikTok atau Instagram Reels dulu.");
     setExtracting(true);
     try {
       const res = await transcribeUrlFn({ data: { url: u } });
-      await createFn({
-        data: {
-          title: res.name,
-          source_type: "url",
-          source_url: res.sourceUrl,
-          platform: res.platform,
-          mime: `video/${res.platform}`,
-          transcript: res.transcript,
-        },
+      setPreview({
+        name: res.name,
+        sourceUrl: res.sourceUrl,
+        platform: res.platform,
+        transcript: res.transcript,
       });
       setUrl("");
-      toast.success(`Transkrip dari ${res.platform} disimpan.`);
-      router.invalidate();
+      toast.success(`Transkrip dari ${res.platform} selesai — silakan edit sebelum simpan.`);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
