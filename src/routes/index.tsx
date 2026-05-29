@@ -146,30 +146,15 @@ function Dashboard() {
           name: res.name,
           mime: `video/${res.platform}`,
           transcript: res.transcript,
+          editedTranscript: res.transcript,
         },
       ]);
       setReelUrl("");
-      toast.success(`Transkrip dari ${res.platform} berhasil!`);
-      // Auto-save to DB
-      try {
-        await createTranscriptFn({
-          data: {
-            title: res.name,
-            source_type: "url",
-            source_url: res.sourceUrl,
-            platform: res.platform,
-            mime: `video/${res.platform}`,
-            transcript: res.transcript,
-          },
-        });
-        toast.success("Tersimpan ke Transcripts.");
-      } catch (e) {
-        toast.warning("Transkrip tidak otomatis tersimpan: " + (e as Error).message);
-      }
+      toast.success(`Transkrip dari ${res.platform} berhasil — silakan edit sebelum simpan.`);
     } catch (e) {
       toast.error((e as Error).message);
     } finally { setReelLoading(false); }
-  }, [reelUrl, transcribeUrlFn, createTranscriptFn]);
+  }, [reelUrl, transcribeUrlFn]);
 
   const onAnalyze = useCallback(async () => {
     const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
