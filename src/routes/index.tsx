@@ -62,7 +62,7 @@ function Dashboard() {
 
   const [urls, setUrls] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
-  const [files, setFiles] = useState<{ path: string; name: string; mime: string; transcript?: string; transcribing?: boolean; transcriptId?: string; saving?: boolean }[]>([]);
+  const [files, setFiles] = useState<{ path: string; name: string; mime: string; transcript?: string; editedTranscript?: string; transcribing?: boolean; transcriptId?: string; saving?: boolean }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
