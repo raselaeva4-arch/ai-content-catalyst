@@ -166,6 +166,47 @@ function TranscriptsPage() {
               }}
             />
           )}
+          {preview && (
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Pencil className="size-4 text-primary" />
+                <h3 className="font-semibold text-sm">Preview & Edit Transkrip</h3>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Judul</label>
+                <Input value={preview.name} onChange={(e) => setPreview((p) => p ? { ...p, name: e.target.value } : null)} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Transkrip</label>
+                <Textarea rows={8} value={preview.transcript} onChange={(e) => setPreview((p) => p ? { ...p, transcript: e.target.value } : null)} />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="ghost" onClick={() => setPreview(null)}><X className="size-4 mr-1.5" />Batal</Button>
+                <Button
+                  onClick={async () => {
+                    if (!preview) return;
+                    try {
+                      await createFn({
+                        data: {
+                          title: preview.name,
+                          source_type: "url",
+                          source_url: preview.sourceUrl,
+                          platform: preview.platform,
+                          mime: `video/${preview.platform}`,
+                          transcript: preview.transcript,
+                        },
+                      });
+                      toast.success("Transkrip disimpan.");
+                      setPreview(null);
+                      router.invalidate();
+                    } catch (e) { toast.error((e as Error).message); }
+                  }}
+                >
+                  <Save className="size-4 mr-1.5" />Simpan ke Transcripts
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* List */}
