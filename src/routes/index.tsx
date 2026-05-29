@@ -75,6 +75,7 @@ function Dashboard() {
     try {
       const f = target ?? (await new Promise<typeof files[number] | undefined>((r) => setFiles((p) => { r(p.find((x) => x.path === path)); return p; })));
       if (!f || !f.transcript) throw new Error("Belum ada transkrip");
+      const transcriptToSave = f.editedTranscript !== undefined ? f.editedTranscript : f.transcript;
       const res = await createTranscriptFn({
         data: {
           title: f.name,
@@ -82,7 +83,7 @@ function Dashboard() {
           source_path: f.path,
           platform: f.mime.split("/")[0],
           mime: f.mime,
-          transcript: f.transcript,
+          transcript: transcriptToSave,
         },
       });
       setFiles((prev) => prev.map((x) => (x.path === path ? { ...x, transcriptId: res.item.id, saving: false } : x)));
