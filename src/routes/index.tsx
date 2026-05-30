@@ -374,8 +374,46 @@ function Dashboard() {
               </TabsContent>
 
 
+              <TabsContent value="record" className="mt-4 space-y-3">
+                <div className="rounded-lg border bg-accent/20 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Mic className="size-4 text-primary" />
+                    <p className="text-sm font-medium">Rekam Audio Langsung</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Klik tombol rekam, bicara di mikrofon, lalu stop. Audio akan otomatis di-transcribe oleh AI dan muncul di daftar Files.
+                  </p>
+                </div>
+                <div className="flex items-center justify-center gap-4 rounded-lg border p-6 bg-card">
+                  {!recording ? (
+                    <Button size="lg" onClick={startRecording} disabled={recProcessing}>
+                      {recProcessing ? <><Loader2 className="size-4 mr-2 animate-spin" />Memproses...</> : <><Mic className="size-4 mr-2" />Mulai Rekam</>}
+                    </Button>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex size-3">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
+                          <span className="relative inline-flex size-3 rounded-full bg-destructive" />
+                        </span>
+                        <span className="font-mono text-sm tabular-nums">
+                          {String(Math.floor(recElapsed / 60)).padStart(2, "0")}:{String(recElapsed % 60).padStart(2, "0")}
+                        </span>
+                      </div>
+                      <Button size="lg" variant="destructive" onClick={stopRecording}>
+                        <Square className="size-4 mr-2" />Stop & Transcribe
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Max 20MB (~kira 20 menit). Pastikan browser punya izin mikrofon. Rekaman bisa diedit transkripnya di tab Files sebelum disimpan.
+                </p>
+              </TabsContent>
+
               <TabsContent value="files" className="mt-4 space-y-3">
                 <label className="block border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-accent/30 transition-colors">
+
                   <Upload className="size-6 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm font-medium">Klik untuk upload file</p>
                   <p className="text-xs text-muted-foreground mt-1">Image, PDF, Audio, Video, DOCX, MD, TXT, HTML (max 20MB)</p>
