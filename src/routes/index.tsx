@@ -316,9 +316,10 @@ function Dashboard() {
             </div>
 
             <Tabs defaultValue="urls">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="urls"><Link2 className="size-3.5 mr-1.5" />Links</TabsTrigger>
                 <TabsTrigger value="reel"><Video className="size-3.5 mr-1.5" />Reel/TikTok</TabsTrigger>
+                <TabsTrigger value="record"><Mic className="size-3.5 mr-1.5" />Record</TabsTrigger>
                 <TabsTrigger value="files"><Upload className="size-3.5 mr-1.5" />Files</TabsTrigger>
                 <TabsTrigger value="notes"><FileText className="size-3.5 mr-1.5" />Notes</TabsTrigger>
               </TabsList>
