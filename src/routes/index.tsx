@@ -59,6 +59,17 @@ function Dashboard() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [reelUrl, setReelUrl] = useState("");
   const [reelLoading, setReelLoading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recElapsed, setRecElapsed] = useState(0);
+  const [recProcessing, setRecProcessing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recChunksRef = useRef<Blob[]>([]);
+  const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => () => {
+    if (recTimerRef.current) clearInterval(recTimerRef.current);
+    mediaRecorderRef.current?.stream.getTracks().forEach((t) => t.stop());
+  }, []);
 
   const [urls, setUrls] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
