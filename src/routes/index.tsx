@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast, Toaster } from "sonner";
-import { Sparkles, Link2, Upload, BookOpen, Trash2, Plus, Loader2, TrendingUp, Hash, FileText, Lightbulb, Tag, Mic, CheckCircle2, Save, History, Video } from "lucide-react";
+import { Sparkles, Link2, Upload, BookOpen, Trash2, Plus, Loader2, TrendingUp, Hash, FileText, Lightbulb, Tag, Mic, CheckCircle2, Save, History, Video, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,6 +59,17 @@ function Dashboard() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [reelUrl, setReelUrl] = useState("");
   const [reelLoading, setReelLoading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recElapsed, setRecElapsed] = useState(0);
+  const [recProcessing, setRecProcessing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recChunksRef = useRef<Blob[]>([]);
+  const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => () => {
+    if (recTimerRef.current) clearInterval(recTimerRef.current);
+    mediaRecorderRef.current?.stream.getTracks().forEach((t) => t.stop());
+  }, []);
 
   const [urls, setUrls] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
@@ -156,6 +167,59 @@ function Dashboard() {
     } finally { setReelLoading(false); }
   }, [reelUrl, transcribeUrlFn]);
 
+  const startRecording = useCallback(async () => {
+    if (recording) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeCandidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
+      const mime = mimeCandidates.find((m) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(m)) ?? "";
+      const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      recChunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) recChunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blobMime = mr.mimeType || "audio/webm";
+        const blob = new Blob(recChunksRef.current, { type: blobMime });
+        recChunksRef.current = [];
+        if (blob.size === 0) { toast.error("Rekaman kosong."); return; }
+        if (blob.size > 20 * 1024 * 1024) { toast.error("Rekaman terlalu besar (max 20MB)."); return; }
+        setRecProcessing(true);
+        try {
+          const ext = blobMime.includes("mp4") ? "m4a" : blobMime.includes("ogg") ? "ogg" : "webm";
+          const name = `recording-${new Date().toISOString().replace(/[:.]/g, "-")}.${ext}`;
+          const path = `${Date.now()}-${Math.random().toString(36).slice(2)}-${name}`;
+          const { error } = await supabase.storage.from("uploads").upload(path, blob, { contentType: blobMime });
+          if (error) throw new Error(error.message);
+          setFiles((prev) => [...prev, { path, name, mime: blobMime }]);
+          toast.success("Rekaman tersimpan — transcribing...");
+          void runTranscribe(path, name, blobMime);
+        } catch (e) {
+          toast.error("Gagal upload rekaman: " + (e as Error).message);
+        } finally {
+          setRecProcessing(false);
+        }
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setRecording(true);
+      setRecElapsed(0);
+      recTimerRef.current = setInterval(() => setRecElapsed((s) => s + 1), 1000);
+    } catch (e) {
+      toast.error("Tidak bisa akses mikrofon: " + (e as Error).message);
+    }
+  }, [recording, runTranscribe]);
+
+  const stopRecording = useCallback(() => {
+    const mr = mediaRecorderRef.current;
+    if (!mr || mr.state === "inactive") return;
+    mr.stop();
+    mediaRecorderRef.current = null;
+    if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null; }
+    setRecording(false);
+  }, []);
+
+
+
   const onAnalyze = useCallback(async () => {
     const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
     if (!cleanUrls.length && !files.length && !notes.trim()) {
@@ -252,9 +316,10 @@ function Dashboard() {
             </div>
 
             <Tabs defaultValue="urls">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="urls"><Link2 className="size-3.5 mr-1.5" />Links</TabsTrigger>
                 <TabsTrigger value="reel"><Video className="size-3.5 mr-1.5" />Reel/TikTok</TabsTrigger>
+                <TabsTrigger value="record"><Mic className="size-3.5 mr-1.5" />Record</TabsTrigger>
                 <TabsTrigger value="files"><Upload className="size-3.5 mr-1.5" />Files</TabsTrigger>
                 <TabsTrigger value="notes"><FileText className="size-3.5 mr-1.5" />Notes</TabsTrigger>
               </TabsList>
@@ -309,8 +374,46 @@ function Dashboard() {
               </TabsContent>
 
 
+              <TabsContent value="record" className="mt-4 space-y-3">
+                <div className="rounded-lg border bg-accent/20 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Mic className="size-4 text-primary" />
+                    <p className="text-sm font-medium">Rekam Audio Langsung</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Klik tombol rekam, bicara di mikrofon, lalu stop. Audio akan otomatis di-transcribe oleh AI dan muncul di daftar Files.
+                  </p>
+                </div>
+                <div className="flex items-center justify-center gap-4 rounded-lg border p-6 bg-card">
+                  {!recording ? (
+                    <Button size="lg" onClick={startRecording} disabled={recProcessing}>
+                      {recProcessing ? <><Loader2 className="size-4 mr-2 animate-spin" />Memproses...</> : <><Mic className="size-4 mr-2" />Mulai Rekam</>}
+                    </Button>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex size-3">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
+                          <span className="relative inline-flex size-3 rounded-full bg-destructive" />
+                        </span>
+                        <span className="font-mono text-sm tabular-nums">
+                          {String(Math.floor(recElapsed / 60)).padStart(2, "0")}:{String(recElapsed % 60).padStart(2, "0")}
+                        </span>
+                      </div>
+                      <Button size="lg" variant="destructive" onClick={stopRecording}>
+                        <Square className="size-4 mr-2" />Stop & Transcribe
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Max 20MB (~kira 20 menit). Pastikan browser punya izin mikrofon. Rekaman bisa diedit transkripnya di tab Files sebelum disimpan.
+                </p>
+              </TabsContent>
+
               <TabsContent value="files" className="mt-4 space-y-3">
                 <label className="block border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-accent/30 transition-colors">
+
                   <Upload className="size-6 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm font-medium">Klik untuk upload file</p>
                   <p className="text-xs text-muted-foreground mt-1">Image, PDF, Audio, Video, DOCX, MD, TXT, HTML (max 20MB)</p>
