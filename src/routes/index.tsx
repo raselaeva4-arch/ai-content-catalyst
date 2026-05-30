@@ -167,6 +167,59 @@ function Dashboard() {
     } finally { setReelLoading(false); }
   }, [reelUrl, transcribeUrlFn]);
 
+  const startRecording = useCallback(async () => {
+    if (recording) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeCandidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
+      const mime = mimeCandidates.find((m) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(m)) ?? "";
+      const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      recChunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) recChunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blobMime = mr.mimeType || "audio/webm";
+        const blob = new Blob(recChunksRef.current, { type: blobMime });
+        recChunksRef.current = [];
+        if (blob.size === 0) { toast.error("Rekaman kosong."); return; }
+        if (blob.size > 20 * 1024 * 1024) { toast.error("Rekaman terlalu besar (max 20MB)."); return; }
+        setRecProcessing(true);
+        try {
+          const ext = blobMime.includes("mp4") ? "m4a" : blobMime.includes("ogg") ? "ogg" : "webm";
+          const name = `recording-${new Date().toISOString().replace(/[:.]/g, "-")}.${ext}`;
+          const path = `${Date.now()}-${Math.random().toString(36).slice(2)}-${name}`;
+          const { error } = await supabase.storage.from("uploads").upload(path, blob, { contentType: blobMime });
+          if (error) throw new Error(error.message);
+          setFiles((prev) => [...prev, { path, name, mime: blobMime }]);
+          toast.success("Rekaman tersimpan — transcribing...");
+          void runTranscribe(path, name, blobMime);
+        } catch (e) {
+          toast.error("Gagal upload rekaman: " + (e as Error).message);
+        } finally {
+          setRecProcessing(false);
+        }
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setRecording(true);
+      setRecElapsed(0);
+      recTimerRef.current = setInterval(() => setRecElapsed((s) => s + 1), 1000);
+    } catch (e) {
+      toast.error("Tidak bisa akses mikrofon: " + (e as Error).message);
+    }
+  }, [recording, runTranscribe]);
+
+  const stopRecording = useCallback(() => {
+    const mr = mediaRecorderRef.current;
+    if (!mr || mr.state === "inactive") return;
+    mr.stop();
+    mediaRecorderRef.current = null;
+    if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null; }
+    setRecording(false);
+  }, []);
+
+
+
   const onAnalyze = useCallback(async () => {
     const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
     if (!cleanUrls.length && !files.length && !notes.trim()) {
