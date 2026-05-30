@@ -190,11 +190,31 @@ function Dashboard() {
           const path = `${Date.now()}-${Math.random().toString(36).slice(2)}-${name}`;
           const { error } = await supabase.storage.from("uploads").upload(path, blob, { contentType: blobMime });
           if (error) throw new Error(error.message);
-          setFiles((prev) => [...prev, { path, name, mime: blobMime }]);
-          toast.success("Rekaman tersimpan — transcribing...");
-          void runTranscribe(path, name, blobMime);
+          setFiles((prev) => [...prev, { path, name, mime: blobMime, transcribing: true }]);
+          toast.success("Rekaman terupload — AI sedang transcribing...");
+          // Transcribe via AI
+          const tr = await transcribeFn({ data: { path, name, mime: blobMime } });
+          setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcript: tr.transcript, editedTranscript: tr.transcript, transcribing: false } : f)));
+          // Auto-save to transcripts DB
+          try {
+            const saved = await createTranscriptFn({
+              data: {
+                title: name,
+                source_type: "file",
+                source_path: path,
+                platform: "audio",
+                mime: blobMime,
+                transcript: tr.transcript,
+              },
+            });
+            setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcriptId: saved.item.id } : f)));
+            toast.success("Transkrip rekaman tersimpan ke database.");
+          } catch (e) {
+            toast.warning("Transkrip selesai tapi gagal auto-save: " + (e as Error).message);
+          }
         } catch (e) {
-          toast.error("Gagal upload rekaman: " + (e as Error).message);
+          setFiles((prev) => prev.map((f) => (f.path.endsWith(blob.size.toString()) ? { ...f, transcribing: false } : f)));
+          toast.error("Gagal: " + (e as Error).message);
         } finally {
           setRecProcessing(false);
         }
@@ -207,7 +227,7 @@ function Dashboard() {
     } catch (e) {
       toast.error("Tidak bisa akses mikrofon: " + (e as Error).message);
     }
-  }, [recording, runTranscribe]);
+  }, [recording, transcribeFn, createTranscriptFn]);
 
   const stopRecording = useCallback(() => {
     const mr = mediaRecorderRef.current;
