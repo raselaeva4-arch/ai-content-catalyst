@@ -227,7 +227,7 @@ function Dashboard() {
     } catch (e) {
       toast.error("Tidak bisa akses mikrofon: " + (e as Error).message);
     }
-  }, [recording, runTranscribe]);
+  }, [recording, transcribeFn, createTranscriptFn]);
 
   const stopRecording = useCallback(() => {
     const mr = mediaRecorderRef.current;
