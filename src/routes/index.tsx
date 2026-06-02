@@ -326,13 +326,13 @@ function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <ProjectSwitcher />
             <Link to="/transcripts">
               <Button variant="outline" size="sm"><Mic className="size-3.5 mr-1.5" />Transcripts</Button>
             </Link>
             <Link to="/history">
               <Button variant="outline" size="sm"><History className="size-3.5 mr-1.5" />History</Button>
             </Link>
-            <Badge variant="secondary" className="font-mono text-xs">v0.1 MVP</Badge>
           </div>
         </div>
       </header>
@@ -528,12 +528,14 @@ function Dashboard() {
         <KnowledgeBasePanel
           items={kb}
           onSave={async (payload) => {
-            await saveKbFn({ data: payload });
-            router.invalidate();
+            await saveKbFn({ data: { project_id: projectId, ...payload } });
+            const r = await listKbFn({ data: { project_id: projectId } });
+            setKb(r.items as any);
           }}
           onDelete={async (id) => {
             await deleteKbFn({ data: { id } });
-            router.invalidate();
+            const r = await listKbFn({ data: { project_id: projectId } });
+            setKb(r.items as any);
           }}
         />
       </main>
