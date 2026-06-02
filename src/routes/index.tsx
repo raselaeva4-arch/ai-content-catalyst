@@ -97,6 +97,7 @@ function Dashboard() {
       const transcriptToSave = f.editedTranscript !== undefined ? f.editedTranscript : f.transcript;
       const res = await createTranscriptFn({
         data: {
+          project_id: projectId,
           title: f.name,
           source_type: "file",
           source_path: f.path,
@@ -111,7 +112,7 @@ function Dashboard() {
       setFiles((prev) => prev.map((x) => (x.path === path ? { ...x, saving: false } : x)));
       toast.error("Gagal simpan transkrip: " + (e as Error).message);
     }
-  }, [files, createTranscriptFn]);
+  }, [files, createTranscriptFn, projectId]);
 
   const runTranscribe = useCallback(async (path: string, name: string, mime: string) => {
     setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcribing: true } : f)));
