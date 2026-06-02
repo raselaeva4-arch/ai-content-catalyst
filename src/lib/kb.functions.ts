@@ -3,26 +3,35 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const KbSchema = z.object({
+  project_id: z.string().uuid(),
   type: z.enum(["playbook", "persona", "knowledge"]),
   title: z.string().min(1).max(200),
   content: z.string().min(1).max(20000),
 });
 
-export const listKb = createServerFn({ method: "GET" }).handler(async () => {
-  const { data, error } = await supabaseAdmin
-    .from("knowledge_base")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return { items: data ?? [] };
-});
+export const listKb = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { data: rows, error } = await supabaseAdmin
+      .from("knowledge_base")
+      .select("*")
+      .eq("project_id", data.project_id)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return { items: rows ?? [] };
+  });
 
 export const saveKb = createServerFn({ method: "POST" })
   .inputValidator((d) => KbSchema.parse(d))
   .handler(async ({ data }) => {
     const { data: row, error } = await supabaseAdmin
       .from("knowledge_base")
-      .insert({ type: data.type, title: data.title, content: data.content })
+      .insert({
+        project_id: data.project_id,
+        type: data.type,
+        title: data.title,
+        content: data.content,
+      })
       .select()
       .single();
     if (error) throw new Error(error.message);

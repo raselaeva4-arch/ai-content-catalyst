@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useRef, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast, Toaster } from "sonner";
@@ -18,13 +18,11 @@ import { transcribeMedia } from "@/lib/transcribe.functions";
 import { transcribeUrl } from "@/lib/transcribe-url.functions";
 import { saveHistory } from "@/lib/history.functions";
 import { createTranscript } from "@/lib/transcripts.functions";
+import { useActiveProject } from "@/hooks/use-active-project";
+import { ProjectSwitcher } from "@/components/project-switcher";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
-  loader: async () => {
-    const kb = await listKb();
-    return { kb: kb.items };
-  },
   head: () => ({
     meta: [
       { title: "KeywordForge — AI Keyword & Title Generator" },
@@ -45,16 +43,25 @@ type AnalysisResult = {
 type TrendRow = { keyword: string; global: number | null; indonesia: number | null };
 
 function Dashboard() {
-  const router = useRouter();
-  const { kb } = Route.useLoaderData();
+  const { projectId } = useActiveProject();
+  const [kb, setKb] = useState<{ id: string; type: string; title: string; content: string }[]>([]);
   const analyze = useServerFn(analyzeContent);
   const trends = useServerFn(getTrends);
+  const listKbFn = useServerFn(listKb);
   const saveKbFn = useServerFn(saveKb);
   const deleteKbFn = useServerFn(deleteKb);
   const transcribeFn = useServerFn(transcribeMedia);
   const transcribeUrlFn = useServerFn(transcribeUrl);
   const saveFn = useServerFn(saveHistory);
   const createTranscriptFn = useServerFn(createTranscript);
+
+  useEffect(() => {
+    let cancelled = false;
+    listKbFn({ data: { project_id: projectId } })
+      .then((r) => { if (!cancelled) setKb(r.items as any); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [projectId, listKbFn]);
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [reelUrl, setReelUrl] = useState("");
@@ -89,6 +96,7 @@ function Dashboard() {
       const transcriptToSave = f.editedTranscript !== undefined ? f.editedTranscript : f.transcript;
       const res = await createTranscriptFn({
         data: {
+          project_id: projectId,
           title: f.name,
           source_type: "file",
           source_path: f.path,
@@ -103,7 +111,7 @@ function Dashboard() {
       setFiles((prev) => prev.map((x) => (x.path === path ? { ...x, saving: false } : x)));
       toast.error("Gagal simpan transkrip: " + (e as Error).message);
     }
-  }, [files, createTranscriptFn]);
+  }, [files, createTranscriptFn, projectId]);
 
   const runTranscribe = useCallback(async (path: string, name: string, mime: string) => {
     setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcribing: true } : f)));
@@ -199,6 +207,7 @@ function Dashboard() {
           try {
             const saved = await createTranscriptFn({
               data: {
+                project_id: projectId,
                 title: name,
                 source_type: "file",
                 source_path: path,
@@ -227,7 +236,7 @@ function Dashboard() {
     } catch (e) {
       toast.error("Tidak bisa akses mikrofon: " + (e as Error).message);
     }
-  }, [recording, transcribeFn, createTranscriptFn]);
+  }, [recording, transcribeFn, createTranscriptFn, projectId]);
 
   const stopRecording = useCallback(() => {
     const mr = mediaRecorderRef.current;
@@ -259,7 +268,7 @@ function Dashboard() {
         .join("\n\n");
       const mergedNotes = [notes.trim(), transcriptBlock].filter(Boolean).join("\n\n");
       const payloadFiles = files.filter((f) => !f.path.startsWith("url:")).map(({ path, name, mime }) => ({ path, name, mime }));
-      const res = await analyze({ data: { urls: cleanUrls, files: payloadFiles, notes: mergedNotes } });
+      const res = await analyze({ data: { project_id: projectId, urls: cleanUrls, files: payloadFiles, notes: mergedNotes } });
       setResult(res.result);
       toast.success("Analisis selesai!");
       // Auto-fetch trends for main keywords
@@ -273,7 +282,7 @@ function Dashboard() {
     } catch (e) {
       toast.error((e as Error).message);
     } finally { setAnalyzing(false); }
-  }, [urls, files, notes, analyze, trends]);
+  }, [urls, files, notes, analyze, trends, projectId]);
 
   const onSave = useCallback(async () => {
     if (!result) return;
@@ -281,6 +290,7 @@ function Dashboard() {
     try {
       const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
       const res = await saveFn({ data: {
+        project_id: projectId,
         title: result.article_titles[0] ?? result.summary.slice(0, 80) ?? "Untitled",
         category: result.category,
         summary: result.summary,
@@ -296,7 +306,7 @@ function Dashboard() {
     } catch (e) {
       toast.error((e as Error).message);
     } finally { setSaving(false); }
-  }, [result, urls, files, notes, saveFn]);
+  }, [result, urls, files, notes, saveFn, projectId]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -315,13 +325,13 @@ function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <ProjectSwitcher />
             <Link to="/transcripts">
               <Button variant="outline" size="sm"><Mic className="size-3.5 mr-1.5" />Transcripts</Button>
             </Link>
             <Link to="/history">
               <Button variant="outline" size="sm"><History className="size-3.5 mr-1.5" />History</Button>
             </Link>
-            <Badge variant="secondary" className="font-mono text-xs">v0.1 MVP</Badge>
           </div>
         </div>
       </header>
@@ -517,12 +527,14 @@ function Dashboard() {
         <KnowledgeBasePanel
           items={kb}
           onSave={async (payload) => {
-            await saveKbFn({ data: payload });
-            router.invalidate();
+            await saveKbFn({ data: { project_id: projectId, ...payload } });
+            const r = await listKbFn({ data: { project_id: projectId } });
+            setKb(r.items as any);
           }}
           onDelete={async (id) => {
             await deleteKbFn({ data: { id } });
-            router.invalidate();
+            const r = await listKbFn({ data: { project_id: projectId } });
+            setKb(r.items as any);
           }}
         />
       </main>

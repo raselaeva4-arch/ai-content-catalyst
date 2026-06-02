@@ -1,8 +1,8 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast, Toaster } from "sonner";
-import { ArrowLeft, Pencil, Trash2, Save, X, Sparkles, FileText, Hash, TrendingUp, Calendar, Eye } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Save, X, Sparkles, FileText, Hash, TrendingUp, Calendar, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,16 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { listHistory, updateHistory, deleteHistory } from "@/lib/history.functions";
+import { useActiveProject } from "@/hooks/use-active-project";
+import { ProjectSwitcher } from "@/components/project-switcher";
 
 function HistoryErrorComponent({ error, reset }: { error: any; reset: () => void }) {
-  const router = useRouter();
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center space-y-4">
         <h1 className="text-xl font-semibold">Terjadi kesalahan</h1>
         <p className="text-sm text-muted-foreground">{error?.message ?? "Gagal memuat riwayat."}</p>
         <div className="flex justify-center gap-2">
-          <Button onClick={() => { router.invalidate(); reset(); }}>Coba lagi</Button>
+          <Button onClick={() => reset()}>Coba lagi</Button>
           <Link to="/"><Button variant="outline">Ke Beranda</Button></Link>
         </div>
       </div>
@@ -40,10 +41,6 @@ function HistoryNotFoundComponent() {
 
 export const Route = createFileRoute("/history")({
   component: HistoryPage,
-  loader: async () => {
-    const res = await listHistory();
-    return { items: res.items };
-  },
   errorComponent: HistoryErrorComponent,
   notFoundComponent: HistoryNotFoundComponent,
   head: () => ({
@@ -69,11 +66,24 @@ type Item = {
 };
 
 function HistoryPage() {
-  const router = useRouter();
-  const { items } = Route.useLoaderData() as { items: Item[] };
+  const { projectId } = useActiveProject();
+  const listFn = useServerFn(listHistory);
   const updateFn = useServerFn(updateHistory);
   const deleteFn = useServerFn(deleteHistory);
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    try {
+      const res = await listFn({ data: { project_id: projectId } });
+      setItems(res.items as Item[]);
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { void refresh(); /* eslint-disable-next-line */ }, [projectId]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -90,15 +100,20 @@ function HistoryPage() {
             </div>
             <div>
               <h1 className="text-lg font-semibold tracking-tight">Riwayat Hasil Generate</h1>
-              <p className="text-xs text-muted-foreground">{items.length} hasil tersimpan</p>
+              <p className="text-xs text-muted-foreground">{items.length} hasil tersimpan di project ini</p>
             </div>
           </div>
-          <Link to="/"><Button variant="outline" size="sm">+ Generate Baru</Button></Link>
+          <div className="flex items-center gap-2">
+            <ProjectSwitcher />
+            <Link to="/"><Button variant="outline" size="sm">+ Generate Baru</Button></Link>
+          </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-4">
-        {items.length === 0 ? (
+        {loading ? (
+          <Card className="p-12 text-center"><Loader2 className="size-6 mx-auto animate-spin text-muted-foreground" /></Card>
+        ) : items.length === 0 ? (
           <Card className="p-12 text-center">
             <FileText className="size-10 mx-auto mb-3 text-muted-foreground" />
             <h2 className="font-semibold mb-1">Belum ada riwayat</h2>
@@ -118,7 +133,7 @@ function HistoryPage() {
                   await updateFn({ data: { id: item.id, ...patch } });
                   toast.success("Perubahan disimpan");
                   setEditingId(null);
-                  router.invalidate();
+                  await refresh();
                 } catch (e) { toast.error((e as Error).message); }
               }}
               onDelete={async () => {
@@ -126,7 +141,7 @@ function HistoryPage() {
                 try {
                   await deleteFn({ data: { id: item.id } });
                   toast.success("Dihapus");
-                  router.invalidate();
+                  await refresh();
                 } catch (e) { toast.error((e as Error).message); }
               }}
             />
