@@ -1,6 +1,6 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast, Toaster } from "sonner";
 import {
   ArrowLeft, Sparkles, Mic, Plus, Loader2, Trash2, Pencil, Save, X, Copy, Calendar, FileText, Link2, Video,
@@ -14,6 +14,8 @@ import {
   listTranscripts, createTranscript, updateTranscript, deleteTranscript,
 } from "@/lib/transcripts.functions";
 import { transcribeUrl } from "@/lib/transcribe-url.functions";
+import { useActiveProject } from "@/hooks/use-active-project";
+import { ProjectSwitcher } from "@/components/project-switcher";
 
 type Item = {
   id: string;
@@ -29,34 +31,8 @@ type Item = {
   updated_at: string;
 };
 
-function ErrorComp({ error, reset }: { error: any; reset: () => void }) {
-  const router = useRouter();
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center space-y-3">
-        <h1 className="text-xl font-semibold">Terjadi kesalahan</h1>
-        <p className="text-sm text-muted-foreground">{error?.message ?? "Gagal memuat transkrip."}</p>
-        <div className="flex justify-center gap-2">
-          <Button onClick={() => { router.invalidate(); reset(); }}>Coba lagi</Button>
-          <Link to="/"><Button variant="outline">Ke Beranda</Button></Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export const Route = createFileRoute("/transcripts")({
   component: TranscriptsPage,
-  loader: async () => {
-    const res = await listTranscripts();
-    return { items: res.items as Item[] };
-  },
-  errorComponent: ErrorComp,
-  notFoundComponent: () => (
-    <div className="min-h-screen flex items-center justify-center">
-      <Link to="/"><Button>Ke Beranda</Button></Link>
-    </div>
-  ),
   head: () => ({
     meta: [
       { title: "Transcripts — KeywordForge" },
@@ -66,24 +42,36 @@ export const Route = createFileRoute("/transcripts")({
 });
 
 function TranscriptsPage() {
-  const router = useRouter();
-  const { items } = Route.useLoaderData() as { items: Item[] };
+  const { projectId } = useActiveProject();
+  const listFn = useServerFn(listTranscripts);
   const transcribeUrlFn = useServerFn(transcribeUrl);
   const createFn = useServerFn(createTranscript);
   const updateFn = useServerFn(updateTranscript);
   const deleteFn = useServerFn(deleteTranscript);
 
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
   const [url, setUrl] = useState("");
   const [extracting, setExtracting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
-
   const [preview, setPreview] = useState<{
     name: string;
     sourceUrl: string;
     platform: string;
     transcript: string;
   } | null>(null);
+
+  const refresh = async () => {
+    setLoading(true);
+    try {
+      const res = await listFn({ data: { project_id: projectId } });
+      setItems(res.items as Item[]);
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { void refresh(); /* eslint-disable-next-line */ }, [projectId]);
 
   const onExtract = async () => {
     const u = url.trim();
@@ -119,15 +107,17 @@ function TranscriptsPage() {
             </div>
             <div>
               <h1 className="text-lg font-semibold tracking-tight">Transcripts</h1>
-              <p className="text-xs text-muted-foreground">{items.length} transkrip tersimpan</p>
+              <p className="text-xs text-muted-foreground">{items.length} transkrip tersimpan di project ini</p>
             </div>
           </div>
-          <Link to="/history"><Button variant="outline" size="sm">History Generate</Button></Link>
+          <div className="flex items-center gap-2">
+            <ProjectSwitcher />
+            <Link to="/history"><Button variant="outline" size="sm">History Generate</Button></Link>
+          </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-        {/* Extract panel */}
         <Card className="p-6 shadow-[var(--shadow-card)] space-y-4">
           <div className="flex items-center gap-2">
             <Sparkles className="size-4 text-primary" />
@@ -158,10 +148,10 @@ function TranscriptsPage() {
               onCancel={() => setShowManual(false)}
               onSave={async (payload) => {
                 try {
-                  await createFn({ data: { ...payload, source_type: "manual" } });
+                  await createFn({ data: { project_id: projectId, ...payload, source_type: "manual" } });
                   toast.success("Transkrip ditambahkan.");
                   setShowManual(false);
-                  router.invalidate();
+                  await refresh();
                 } catch (e) { toast.error((e as Error).message); }
               }}
             />
@@ -188,6 +178,7 @@ function TranscriptsPage() {
                     try {
                       await createFn({
                         data: {
+                          project_id: projectId,
                           title: preview.name,
                           source_type: "url",
                           source_url: preview.sourceUrl,
@@ -198,7 +189,7 @@ function TranscriptsPage() {
                       });
                       toast.success("Transkrip disimpan.");
                       setPreview(null);
-                      router.invalidate();
+                      await refresh();
                     } catch (e) { toast.error((e as Error).message); }
                   }}
                 >
@@ -209,8 +200,9 @@ function TranscriptsPage() {
           )}
         </Card>
 
-        {/* List */}
-        {items.length === 0 ? (
+        {loading ? (
+          <Card className="p-12 text-center"><Loader2 className="size-6 mx-auto animate-spin text-muted-foreground" /></Card>
+        ) : items.length === 0 ? (
           <Card className="p-12 text-center">
             <Mic className="size-10 mx-auto mb-3 text-muted-foreground" />
             <h2 className="font-semibold mb-1">Belum ada transkrip</h2>
@@ -230,7 +222,7 @@ function TranscriptsPage() {
                     await updateFn({ data: { id: it.id, ...patch } });
                     toast.success("Perubahan disimpan.");
                     setEditingId(null);
-                    router.invalidate();
+                    await refresh();
                   } catch (e) { toast.error((e as Error).message); }
                 }}
                 onDelete={async () => {
@@ -238,7 +230,7 @@ function TranscriptsPage() {
                   try {
                     await deleteFn({ data: { id: it.id } });
                     toast.success("Dihapus.");
-                    router.invalidate();
+                    await refresh();
                   } catch (e) { toast.error((e as Error).message); }
                 }}
               />

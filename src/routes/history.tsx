@@ -1,8 +1,8 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast, Toaster } from "sonner";
-import { ArrowLeft, Pencil, Trash2, Save, X, Sparkles, FileText, Hash, TrendingUp, Calendar, Eye } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Save, X, Sparkles, FileText, Hash, TrendingUp, Calendar, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,16 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { listHistory, updateHistory, deleteHistory } from "@/lib/history.functions";
+import { useActiveProject } from "@/hooks/use-active-project";
+import { ProjectSwitcher } from "@/components/project-switcher";
 
 function HistoryErrorComponent({ error, reset }: { error: any; reset: () => void }) {
-  const router = useRouter();
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center space-y-4">
         <h1 className="text-xl font-semibold">Terjadi kesalahan</h1>
         <p className="text-sm text-muted-foreground">{error?.message ?? "Gagal memuat riwayat."}</p>
         <div className="flex justify-center gap-2">
-          <Button onClick={() => { router.invalidate(); reset(); }}>Coba lagi</Button>
+          <Button onClick={() => reset()}>Coba lagi</Button>
           <Link to="/"><Button variant="outline">Ke Beranda</Button></Link>
         </div>
       </div>
@@ -40,10 +41,6 @@ function HistoryNotFoundComponent() {
 
 export const Route = createFileRoute("/history")({
   component: HistoryPage,
-  loader: async () => {
-    const res = await listHistory();
-    return { items: res.items };
-  },
   errorComponent: HistoryErrorComponent,
   notFoundComponent: HistoryNotFoundComponent,
   head: () => ({
