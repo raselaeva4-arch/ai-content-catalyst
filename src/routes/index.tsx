@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useRef, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast, Toaster } from "sonner";
@@ -43,7 +43,6 @@ type AnalysisResult = {
 type TrendRow = { keyword: string; global: number | null; indonesia: number | null };
 
 function Dashboard() {
-  const router = useRouter();
   const { projectId } = useActiveProject();
   const [kb, setKb] = useState<{ id: string; type: string; title: string; content: string }[]>([]);
   const analyze = useServerFn(analyzeContent);
