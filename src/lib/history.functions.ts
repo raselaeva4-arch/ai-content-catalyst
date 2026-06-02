@@ -3,6 +3,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const SaveSchema = z.object({
+  project_id: z.string().uuid(),
   title: z.string().min(1).max(300),
   category: z.string().max(50).nullable().optional(),
   summary: z.string().max(5000).nullable().optional(),
@@ -16,21 +17,24 @@ const SaveSchema = z.object({
 
 const UpdateSchema = SaveSchema.partial().extend({ id: z.string().uuid() });
 
-export const listHistory = createServerFn({ method: "GET" }).handler(async () => {
-  const { data, error } = await supabaseAdmin
-    .from("saved_generations")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return { items: data ?? [] };
-});
+export const listHistory = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { data: rows, error } = await supabaseAdmin
+      .from("saved_generations")
+      .select("*")
+      .eq("project_id", data.project_id)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return { items: rows ?? [] };
+  });
 
 export const saveHistory = createServerFn({ method: "POST" })
   .inputValidator((d) => SaveSchema.parse(d))
   .handler(async ({ data }) => {
     const { data: row, error } = await supabaseAdmin
       .from("saved_generations")
-      .insert(data as any)
+      .insert(data)
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -43,7 +47,7 @@ export const updateHistory = createServerFn({ method: "POST" })
     const { id, ...rest } = data;
     const { data: row, error } = await supabaseAdmin
       .from("saved_generations")
-      .update(rest as any)
+      .update(rest)
       .eq("id", id)
       .select()
       .single();

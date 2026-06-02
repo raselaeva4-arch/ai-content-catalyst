@@ -3,6 +3,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const InputSchema = z.object({
+  project_id: z.string().uuid(),
   urls: z.array(z.string().url()).max(10).default([]),
   files: z.array(z.object({
     path: z.string().min(1),
@@ -70,14 +71,12 @@ async function scrapeUrl(url: string): Promise<string> {
     });
     if (!res.ok) return `[Failed to fetch ${url}: ${res.status}]`;
     const html = await res.text();
-    // Strip scripts/styles then tags
     const cleaned = html
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-    // Limit length
     return `[URL: ${url}]\n${cleaned.slice(0, 8000)}`;
   } catch (e) {
     return `[Error scraping ${url}: ${(e as Error).message}]`;
@@ -89,7 +88,6 @@ async function fileToBase64(path: string): Promise<string | null> {
     const { data, error } = await supabaseAdmin.storage.from("uploads").download(path);
     if (error || !data) return null;
     const buf = await data.arrayBuffer();
-    // Convert to base64 in chunks
     const bytes = new Uint8Array(buf);
     let binary = "";
     const chunkSize = 8192;
@@ -108,10 +106,10 @@ export const analyzeContent = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
-    // 1. Load knowledge base for context
     const { data: kb } = await supabaseAdmin
       .from("knowledge_base")
       .select("type,title,content")
+      .eq("project_id", data.project_id)
       .order("created_at", { ascending: false })
       .limit(50);
 
@@ -119,10 +117,8 @@ export const analyzeContent = createServerFn({ method: "POST" })
       .map((k) => `### ${k.type.toUpperCase()} — ${k.title}\n${k.content}`)
       .join("\n\n");
 
-    // 2. Scrape URLs in parallel
     const scraped = await Promise.all(data.urls.map(scrapeUrl));
 
-    // 3. Build multimodal message parts
     const userParts: any[] = [];
     let textBlock = "";
 
@@ -130,7 +126,6 @@ export const analyzeContent = createServerFn({ method: "POST" })
     if (data.notes) textBlock += `=== USER NOTES ===\n${data.notes}\n\n`;
     if (scraped.length) textBlock += `=== SCRAPED URL CONTENT ===\n${scraped.join("\n\n")}\n\n`;
 
-    // 4. Process files — attach images/PDFs/audio/video as base64 to Gemini
     const supportedInline = /^(image|application\/pdf|audio|video)/;
     for (const f of data.files) {
       const b64 = await fileToBase64(f.path);
@@ -144,7 +139,6 @@ export const analyzeContent = createServerFn({ method: "POST" })
           image_url: { url: `data:${f.mime};base64,${b64}` },
         });
       } else {
-        // text-like: docx/html/md/txt — decode as utf-8
         try {
           const decoded = atob(b64);
           textBlock += `=== FILE: ${f.name} ===\n${decoded.slice(0, 8000)}\n\n`;
@@ -163,7 +157,6 @@ export const analyzeContent = createServerFn({ method: "POST" })
       text: textBlock + "\n\nAnalisis semua konten di atas dan hasilkan rekomendasi keyword & judul.",
     });
 
-    // 5. Call Lovable AI Gateway
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -202,10 +195,10 @@ export const analyzeContent = createServerFn({ method: "POST" })
     }
     const result = JSON.parse(toolCall.function.arguments);
 
-    // 6. Persist analysis
     const { data: row } = await supabaseAdmin
       .from("analyses")
       .insert({
+        project_id: data.project_id,
         inputs: { urls: data.urls, files: data.files.map((f) => f.name), notes: data.notes },
         result,
         status: "done",
@@ -216,12 +209,15 @@ export const analyzeContent = createServerFn({ method: "POST" })
     return { id: row?.id, result };
   });
 
-export const listAnalyses = createServerFn({ method: "GET" }).handler(async () => {
-  const { data } = await supabaseAdmin
-    .from("analyses")
-    .select("id,inputs,result,created_at")
-    .eq("status", "done")
-    .order("created_at", { ascending: false })
-    .limit(20);
-  return { items: data ?? [] };
-});
+export const listAnalyses = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { data: rows } = await supabaseAdmin
+      .from("analyses")
+      .select("id,inputs,result,created_at")
+      .eq("project_id", data.project_id)
+      .eq("status", "done")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    return { items: rows ?? [] };
+  });

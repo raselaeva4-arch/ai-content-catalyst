@@ -3,6 +3,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const CreateSchema = z.object({
+  project_id: z.string().uuid(),
   title: z.string().min(1).max(300),
   source_type: z.enum(["url", "file", "manual"]).default("url"),
   source_url: z.string().max(2048).nullable().optional(),
@@ -15,14 +16,17 @@ const CreateSchema = z.object({
 
 const UpdateSchema = CreateSchema.partial().extend({ id: z.string().uuid() });
 
-export const listTranscripts = createServerFn({ method: "GET" }).handler(async () => {
-  const { data, error } = await supabaseAdmin
-    .from("transcripts")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return { items: data ?? [] };
-});
+export const listTranscripts = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { data: rows, error } = await supabaseAdmin
+      .from("transcripts")
+      .select("*")
+      .eq("project_id", data.project_id)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return { items: rows ?? [] };
+  });
 
 export const getTranscriptById = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
@@ -41,7 +45,7 @@ export const createTranscript = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: row, error } = await supabaseAdmin
       .from("transcripts")
-      .insert(data as any)
+      .insert(data)
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -54,7 +58,7 @@ export const updateTranscript = createServerFn({ method: "POST" })
     const { id, ...rest } = data;
     const { data: row, error } = await supabaseAdmin
       .from("transcripts")
-      .update(rest as any)
+      .update(rest)
       .eq("id", id)
       .select()
       .single();
