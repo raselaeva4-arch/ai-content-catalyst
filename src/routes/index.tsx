@@ -18,13 +18,11 @@ import { transcribeMedia } from "@/lib/transcribe.functions";
 import { transcribeUrl } from "@/lib/transcribe-url.functions";
 import { saveHistory } from "@/lib/history.functions";
 import { createTranscript } from "@/lib/transcripts.functions";
+import { useActiveProject } from "@/hooks/use-active-project";
+import { ProjectSwitcher } from "@/components/project-switcher";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
-  loader: async () => {
-    const kb = await listKb();
-    return { kb: kb.items };
-  },
   head: () => ({
     meta: [
       { title: "KeywordForge — AI Keyword & Title Generator" },
