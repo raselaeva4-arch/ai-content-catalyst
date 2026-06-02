@@ -44,15 +44,25 @@ type TrendRow = { keyword: string; global: number | null; indonesia: number | nu
 
 function Dashboard() {
   const router = useRouter();
-  const { kb } = Route.useLoaderData();
+  const { projectId } = useActiveProject();
+  const [kb, setKb] = useState<{ id: string; type: string; title: string; content: string }[]>([]);
   const analyze = useServerFn(analyzeContent);
   const trends = useServerFn(getTrends);
+  const listKbFn = useServerFn(listKb);
   const saveKbFn = useServerFn(saveKb);
   const deleteKbFn = useServerFn(deleteKb);
   const transcribeFn = useServerFn(transcribeMedia);
   const transcribeUrlFn = useServerFn(transcribeUrl);
   const saveFn = useServerFn(saveHistory);
   const createTranscriptFn = useServerFn(createTranscript);
+
+  useEffect(() => {
+    let cancelled = false;
+    listKbFn({ data: { project_id: projectId } })
+      .then((r) => { if (!cancelled) setKb(r.items as any); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [projectId, listKbFn]);
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [reelUrl, setReelUrl] = useState("");
