@@ -208,6 +208,7 @@ function Dashboard() {
           try {
             const saved = await createTranscriptFn({
               data: {
+                project_id: projectId,
                 title: name,
                 source_type: "file",
                 source_path: path,
@@ -236,7 +237,7 @@ function Dashboard() {
     } catch (e) {
       toast.error("Tidak bisa akses mikrofon: " + (e as Error).message);
     }
-  }, [recording, transcribeFn, createTranscriptFn]);
+  }, [recording, transcribeFn, createTranscriptFn, projectId]);
 
   const stopRecording = useCallback(() => {
     const mr = mediaRecorderRef.current;
@@ -268,7 +269,7 @@ function Dashboard() {
         .join("\n\n");
       const mergedNotes = [notes.trim(), transcriptBlock].filter(Boolean).join("\n\n");
       const payloadFiles = files.filter((f) => !f.path.startsWith("url:")).map(({ path, name, mime }) => ({ path, name, mime }));
-      const res = await analyze({ data: { urls: cleanUrls, files: payloadFiles, notes: mergedNotes } });
+      const res = await analyze({ data: { project_id: projectId, urls: cleanUrls, files: payloadFiles, notes: mergedNotes } });
       setResult(res.result);
       toast.success("Analisis selesai!");
       // Auto-fetch trends for main keywords
@@ -282,7 +283,7 @@ function Dashboard() {
     } catch (e) {
       toast.error((e as Error).message);
     } finally { setAnalyzing(false); }
-  }, [urls, files, notes, analyze, trends]);
+  }, [urls, files, notes, analyze, trends, projectId]);
 
   const onSave = useCallback(async () => {
     if (!result) return;
@@ -290,6 +291,7 @@ function Dashboard() {
     try {
       const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
       const res = await saveFn({ data: {
+        project_id: projectId,
         title: result.article_titles[0] ?? result.summary.slice(0, 80) ?? "Untitled",
         category: result.category,
         summary: result.summary,
@@ -305,7 +307,7 @@ function Dashboard() {
     } catch (e) {
       toast.error((e as Error).message);
     } finally { setSaving(false); }
-  }, [result, urls, files, notes, saveFn]);
+  }, [result, urls, files, notes, saveFn, projectId]);
 
   return (
     <div className="min-h-screen bg-background">
