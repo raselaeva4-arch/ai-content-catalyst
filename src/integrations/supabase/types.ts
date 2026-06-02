@@ -20,6 +20,7 @@ export type Database = {
           error: string | null
           id: string
           inputs: Json
+          project_id: string
           result: Json | null
           status: string
         }
@@ -28,6 +29,7 @@ export type Database = {
           error?: string | null
           id?: string
           inputs?: Json
+          project_id: string
           result?: Json | null
           status?: string
         }
@@ -36,16 +38,26 @@ export type Database = {
           error?: string | null
           id?: string
           inputs?: Json
+          project_id?: string
           result?: Json | null
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "analyses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       knowledge_base: {
         Row: {
           content: string
           created_at: string
           id: string
+          project_id: string
           title: string
           type: string
           updated_at: string
@@ -54,6 +66,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          project_id: string
           title: string
           type: string
           updated_at?: string
@@ -62,8 +75,41 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          project_id?: string
           title?: string
           type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
           updated_at?: string
         }
         Relationships: []
@@ -77,6 +123,7 @@ export type Database = {
           id: string
           main_keywords: Json
           notes: string | null
+          project_id: string
           secondary_keywords: Json
           source_inputs: Json
           summary: string | null
@@ -91,6 +138,7 @@ export type Database = {
           id?: string
           main_keywords?: Json
           notes?: string | null
+          project_id: string
           secondary_keywords?: Json
           source_inputs?: Json
           summary?: string | null
@@ -105,13 +153,22 @@ export type Database = {
           id?: string
           main_keywords?: Json
           notes?: string | null
+          project_id?: string
           secondary_keywords?: Json
           source_inputs?: Json
           summary?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "saved_generations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transcripts: {
         Row: {
@@ -120,6 +177,7 @@ export type Database = {
           mime: string | null
           notes: string | null
           platform: string | null
+          project_id: string
           source_path: string | null
           source_type: string
           source_url: string | null
@@ -133,6 +191,7 @@ export type Database = {
           mime?: string | null
           notes?: string | null
           platform?: string | null
+          project_id: string
           source_path?: string | null
           source_type?: string
           source_url?: string | null
@@ -146,6 +205,7 @@ export type Database = {
           mime?: string | null
           notes?: string | null
           platform?: string | null
+          project_id?: string
           source_path?: string | null
           source_type?: string
           source_url?: string | null
@@ -153,7 +213,15 @@ export type Database = {
           transcript?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transcripts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
