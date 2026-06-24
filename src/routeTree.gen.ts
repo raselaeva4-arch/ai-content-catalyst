@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TranscriptsRouteImport } from './routes/transcripts'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HistoryIdRouteImport } from './routes/history.$id'
 
@@ -30,6 +31,11 @@ const HistoryRoute = HistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -43,6 +49,7 @@ const HistoryIdRoute = HistoryIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/history': typeof HistoryRouteWithChildren
   '/projects': typeof ProjectsRoute
   '/transcripts': typeof TranscriptsRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/history': typeof HistoryRouteWithChildren
   '/projects': typeof ProjectsRoute
   '/transcripts': typeof TranscriptsRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/history': typeof HistoryRouteWithChildren
   '/projects': typeof ProjectsRoute
   '/transcripts': typeof TranscriptsRoute
@@ -65,12 +74,19 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/history' | '/projects' | '/transcripts' | '/history/$id'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/history'
+    | '/projects'
+    | '/transcripts'
+    | '/history/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/history' | '/projects' | '/transcripts' | '/history/$id'
+  to: '/' | '/auth' | '/history' | '/projects' | '/transcripts' | '/history/$id'
   id:
     | '__root__'
     | '/'
+    | '/auth'
     | '/history'
     | '/projects'
     | '/transcripts'
@@ -79,6 +95,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRoute
   HistoryRoute: typeof HistoryRouteWithChildren
   ProjectsRoute: typeof ProjectsRoute
   TranscriptsRoute: typeof TranscriptsRoute
@@ -105,6 +122,13 @@ declare module '@tanstack/react-router' {
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -137,6 +161,7 @@ const HistoryRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRoute,
   HistoryRoute: HistoryRouteWithChildren,
   ProjectsRoute: ProjectsRoute,
   TranscriptsRoute: TranscriptsRoute,

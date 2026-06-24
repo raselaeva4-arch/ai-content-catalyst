@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const KbSchema = z.object({
   project_id: z.string().uuid(),
@@ -10,9 +10,10 @@ const KbSchema = z.object({
 });
 
 export const listKb = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const { data: rows, error } = await supabaseAdmin
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
       .from("knowledge_base")
       .select("*")
       .eq("project_id", data.project_id)
@@ -22,9 +23,10 @@ export const listKb = createServerFn({ method: "POST" })
   });
 
 export const saveKb = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => KbSchema.parse(d))
-  .handler(async ({ data }) => {
-    const { data: row, error } = await supabaseAdmin
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
       .from("knowledge_base")
       .insert({
         project_id: data.project_id,
@@ -39,9 +41,10 @@ export const saveKb = createServerFn({ method: "POST" })
   });
 
 export const deleteKb = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const { error } = await supabaseAdmin.from("knowledge_base").delete().eq("id", data.id);
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("knowledge_base").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

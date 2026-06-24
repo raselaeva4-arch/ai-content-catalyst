@@ -84,7 +84,10 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
 export const transcribeUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => InputSchema.parse(d))
   .handler(async ({ data }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -115,7 +118,7 @@ export const transcribeUrl = createServerFn({ method: "POST" })
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           {
             role: "system",

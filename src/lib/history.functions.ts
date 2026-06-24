@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const SaveSchema = z.object({
   project_id: z.string().uuid(),
@@ -18,9 +18,10 @@ const SaveSchema = z.object({
 const UpdateSchema = SaveSchema.partial().extend({ id: z.string().uuid() });
 
 export const listHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const { data: rows, error } = await supabaseAdmin
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
       .from("saved_generations")
       .select("*")
       .eq("project_id", data.project_id)
@@ -30,9 +31,10 @@ export const listHistory = createServerFn({ method: "POST" })
   });
 
 export const saveHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => SaveSchema.parse(d))
-  .handler(async ({ data }) => {
-    const { data: row, error } = await supabaseAdmin
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
       .from("saved_generations")
       .insert(data)
       .select()
@@ -42,10 +44,11 @@ export const saveHistory = createServerFn({ method: "POST" })
   });
 
 export const updateHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => UpdateSchema.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await context.supabase
       .from("saved_generations")
       .update(rest)
       .eq("id", id)
@@ -56,17 +59,19 @@ export const updateHistory = createServerFn({ method: "POST" })
   });
 
 export const deleteHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const { error } = await supabaseAdmin.from("saved_generations").delete().eq("id", data.id);
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("saved_generations").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
-export const getHistoryById = createServerFn({ method: "GET" })
+export const getHistoryById = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const { data: row, error } = await supabaseAdmin
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
       .from("saved_generations")
       .select("*")
       .eq("id", data.id)

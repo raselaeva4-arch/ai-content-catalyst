@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const InputSchema = z.object({
   project_id: z.string().uuid(),
@@ -83,9 +84,9 @@ async function scrapeUrl(url: string): Promise<string> {
   }
 }
 
-async function fileToBase64(path: string): Promise<string | null> {
+async function fileToBase64(client: SupabaseClient, path: string): Promise<string | null> {
   try {
-    const { data, error } = await supabaseAdmin.storage.from("uploads").download(path);
+    const { data, error } = await client.storage.from("uploads").download(path);
     if (error || !data) return null;
     const buf = await data.arrayBuffer();
     const bytes = new Uint8Array(buf);
@@ -101,12 +102,13 @@ async function fileToBase64(path: string): Promise<string | null> {
 }
 
 export const analyzeContent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => InputSchema.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { data: kb } = await supabaseAdmin
+    const { data: kb } = await context.supabase
       .from("knowledge_base")
       .select("type,title,content")
       .eq("project_id", data.project_id)
@@ -128,7 +130,7 @@ export const analyzeContent = createServerFn({ method: "POST" })
 
     const supportedInline = /^(image|application\/pdf|audio|video)/;
     for (const f of data.files) {
-      const b64 = await fileToBase64(f.path);
+      const b64 = await fileToBase64(context.supabase, f.path);
       if (!b64) {
         textBlock += `[File ${f.name}: failed to load]\n`;
         continue;
@@ -164,7 +166,7 @@ export const analyzeContent = createServerFn({ method: "POST" })
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userParts },
@@ -195,7 +197,7 @@ export const analyzeContent = createServerFn({ method: "POST" })
     }
     const result = JSON.parse(toolCall.function.arguments);
 
-    const { data: row } = await supabaseAdmin
+    const { data: row } = await context.supabase
       .from("analyses")
       .insert({
         project_id: data.project_id,
@@ -210,9 +212,10 @@ export const analyzeContent = createServerFn({ method: "POST" })
   });
 
 export const listAnalyses = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const { data: rows } = await supabaseAdmin
+  .handler(async ({ data, context }) => {
+    const { data: rows } = await context.supabase
       .from("analyses")
       .select("id,inputs,result,created_at")
       .eq("project_id", data.project_id)
