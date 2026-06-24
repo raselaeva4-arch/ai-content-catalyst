@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const InputSchema = z.object({
   path: z.string().min(1),
@@ -8,8 +9,8 @@ const InputSchema = z.object({
   name: z.string().min(1),
 });
 
-async function fileToBase64(path: string): Promise<string | null> {
-  const { data, error } = await supabaseAdmin.storage.from("uploads").download(path);
+async function fileToBase64(client: SupabaseClient, path: string): Promise<string | null> {
+  const { data, error } = await client.storage.from("uploads").download(path);
   if (error || !data) return null;
   const buf = await data.arrayBuffer();
   const bytes = new Uint8Array(buf);
@@ -22,8 +23,9 @@ async function fileToBase64(path: string): Promise<string | null> {
 }
 
 export const transcribeMedia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => InputSchema.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -31,7 +33,7 @@ export const transcribeMedia = createServerFn({ method: "POST" })
       throw new Error("Hanya file audio atau video yang bisa di-transcribe.");
     }
 
-    const b64 = await fileToBase64(data.path);
+    const b64 = await fileToBase64(context.supabase, data.path);
     if (!b64) throw new Error("Gagal memuat file dari storage.");
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -41,7 +43,7 @@ export const transcribeMedia = createServerFn({ method: "POST" })
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           {
             role: "system",
