@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const CreateSchema = z.object({
   project_id: z.string().uuid(),
@@ -17,9 +17,10 @@ const CreateSchema = z.object({
 const UpdateSchema = CreateSchema.partial().extend({ id: z.string().uuid() });
 
 export const listTranscripts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const { data: rows, error } = await supabaseAdmin
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
       .from("transcripts")
       .select("*")
       .eq("project_id", data.project_id)
@@ -28,10 +29,11 @@ export const listTranscripts = createServerFn({ method: "POST" })
     return { items: rows ?? [] };
   });
 
-export const getTranscriptById = createServerFn({ method: "GET" })
+export const getTranscriptById = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const { data: row, error } = await supabaseAdmin
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
       .from("transcripts")
       .select("*")
       .eq("id", data.id)
@@ -41,9 +43,10 @@ export const getTranscriptById = createServerFn({ method: "GET" })
   });
 
 export const createTranscript = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => CreateSchema.parse(d))
-  .handler(async ({ data }) => {
-    const { data: row, error } = await supabaseAdmin
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
       .from("transcripts")
       .insert(data)
       .select()
@@ -53,10 +56,11 @@ export const createTranscript = createServerFn({ method: "POST" })
   });
 
 export const updateTranscript = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => UpdateSchema.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await context.supabase
       .from("transcripts")
       .update(rest)
       .eq("id", id)
@@ -67,9 +71,10 @@ export const updateTranscript = createServerFn({ method: "POST" })
   });
 
 export const deleteTranscript = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const { error } = await supabaseAdmin.from("transcripts").delete().eq("id", data.id);
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("transcripts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
