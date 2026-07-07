@@ -525,9 +525,15 @@ function Dashboard() {
 
         {/* Right: Knowledge Base */}
         <KnowledgeBasePanel
+          projectId={projectId}
           items={kb}
           onSave={async (payload) => {
             await saveKbFn({ data: { project_id: projectId, ...payload } });
+            const r = await listKbFn({ data: { project_id: projectId } });
+            setKb(r.items as any);
+          }}
+          onSaveFile={async (payload) => {
+            await saveKbFile({ data: { project_id: projectId, ...payload } });
             const r = await listKbFn({ data: { project_id: projectId } });
             setKb(r.items as any);
           }}
