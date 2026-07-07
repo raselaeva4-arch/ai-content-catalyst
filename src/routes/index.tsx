@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeContent } from "@/lib/analysis.functions";
 import { getTrends } from "@/lib/trends.functions";
-import { listKb, saveKb, deleteKb } from "@/lib/kb.functions";
+import { listKb, saveKb, deleteKb, saveKbFile } from "@/lib/kb.functions";
 import { transcribeMedia } from "@/lib/transcribe.functions";
 import { transcribeUrl } from "@/lib/transcribe-url.functions";
 import { saveHistory } from "@/lib/history.functions";
