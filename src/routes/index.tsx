@@ -639,9 +639,11 @@ function TrendStat({ label, value }: { label: string; value: number | null }) {
   );
 }
 
-function KnowledgeBasePanel({ items, onSave, onDelete }: {
+function KnowledgeBasePanel({ projectId, items, onSave, onSaveFile, onDelete }: {
+  projectId: string;
   items: { id: string; type: string; title: string; content: string }[];
   onSave: (p: { type: "playbook" | "persona" | "knowledge"; title: string; content: string }) => Promise<void>;
+  onSaveFile: (p: { path: string; name: string; mime: string; type: "playbook" | "persona" | "knowledge" }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
   const [adding, setAdding] = useState(false);
@@ -649,6 +651,8 @@ function KnowledgeBasePanel({ items, onSave, onDelete }: {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploadingKb, setUploadingKb] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const submit = async () => {
     if (!title.trim() || !content.trim()) { toast.error("Title & content wajib diisi"); return; }
@@ -659,6 +663,29 @@ function KnowledgeBasePanel({ items, onSave, onDelete }: {
       setTitle(""); setContent(""); setAdding(false);
     } catch (e) { toast.error((e as Error).message); }
     finally { setSaving(false); }
+  };
+
+  const onFilesPicked = async (fileList: FileList | null) => {
+    if (!fileList?.length) return;
+    setUploadingKb(true);
+    try {
+      for (const f of Array.from(fileList)) {
+        if (f.size > 20 * 1024 * 1024) { toast.error(`${f.name} > 20MB`); continue; }
+        const path = `kb/${projectId}/${Date.now()}-${Math.random().toString(36).slice(2)}-${f.name}`;
+        const { error } = await supabase.storage.from("uploads").upload(path, f);
+        if (error) { toast.error(`Upload ${f.name} gagal: ${error.message}`); continue; }
+        toast.info(`Mengekstrak "${f.name}" dengan AI...`);
+        try {
+          await onSaveFile({ path, name: f.name, mime: f.type || "application/octet-stream", type });
+          toast.success(`"${f.name}" masuk Knowledge Base`);
+        } catch (e) {
+          toast.error(`Ekstraksi ${f.name} gagal: ${(e as Error).message}`);
+        }
+      }
+    } finally {
+      setUploadingKb(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -691,13 +718,29 @@ function KnowledgeBasePanel({ items, onSave, onDelete }: {
             <Button size="sm" onClick={submit} disabled={saving}>{saving ? "..." : "Save"}</Button>
             <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancel</Button>
           </div>
+
+          <div className="pt-2 border-t mt-2">
+            <label className="text-xs text-muted-foreground block mb-1.5">Atau upload file (PDF, DOC, PPT, Image)</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.csv,image/*"
+              className="hidden"
+              onChange={(e) => onFilesPicked(e.target.files)}
+            />
+            <Button size="sm" variant="outline" className="w-full" disabled={uploadingKb} onClick={() => fileInputRef.current?.click()}>
+              {uploadingKb ? <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Mengekstrak...</> : <><Upload className="size-3.5 mr-1.5" />Upload & AI Extract</>}
+            </Button>
+            <p className="text-[10px] text-muted-foreground mt-1">AI akan mengekstrak isi & menyimpan sebagai "{type}".</p>
+          </div>
         </div>
       )}
 
       <div className="space-y-2 max-h-[60vh] overflow-y-auto">
         {items.length === 0 && !adding && (
           <p className="text-xs text-muted-foreground text-center py-6">
-            Belum ada knowledge. Tambah playbook atau user persona agar rekomendasi AI lebih sesuai brand kamu.
+            Belum ada knowledge. Tambah playbook, persona, atau upload file (PDF/DOC/PPT/Image) — AI akan mengekstrak isinya otomatis.
           </p>
         )}
         {items.map((it) => (
