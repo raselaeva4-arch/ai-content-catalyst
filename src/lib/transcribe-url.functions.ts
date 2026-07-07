@@ -63,7 +63,7 @@ function extractVideoUrl(html: string, platform: "tiktok" | "instagram" | "other
 async function downloadVideo(videoUrl: string, referer: string): Promise<{ bytes: Uint8Array; mime: string }> {
   const res = await fetch(videoUrl, {
     headers: {
-      "User-Agent": UA,
+      "User-Agent": UA_DEFAULT,
       Referer: referer,
       Accept: "*/*",
       Range: "bytes=0-",
