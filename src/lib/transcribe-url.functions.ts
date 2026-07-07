@@ -5,8 +5,10 @@ const InputSchema = z.object({
   url: z.string().url().min(1).max(2048),
 });
 
-const UA =
+const UA_DEFAULT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+// Instagram serves complete OG tags (including og:video) to social crawlers
+const UA_FACEBOOK = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)";
 
 function detectPlatform(url: string): "tiktok" | "instagram" | "other" {
   if (/tiktok\.com|vm\.tiktok\.com|vt\.tiktok\.com/i.test(url)) return "tiktok";
@@ -14,11 +16,11 @@ function detectPlatform(url: string): "tiktok" | "instagram" | "other" {
   return "other";
 }
 
-async function fetchHtml(url: string): Promise<string> {
+async function fetchHtml(url: string, ua: string): Promise<string> {
   const res = await fetch(url, {
     redirect: "follow",
     headers: {
-      "User-Agent": UA,
+      "User-Agent": ua,
       Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
     },
@@ -26,6 +28,7 @@ async function fetchHtml(url: string): Promise<string> {
   if (!res.ok) throw new Error(`Gagal mengambil halaman (${res.status}). Link mungkin private/diblokir.`);
   return await res.text();
 }
+
 
 function unescapeJson(s: string): string {
   return s.replace(/\\u002F/g, "/").replace(/\\\//g, "/").replace(/\\"/g, '"');
@@ -60,7 +63,7 @@ function extractVideoUrl(html: string, platform: "tiktok" | "instagram" | "other
 async function downloadVideo(videoUrl: string, referer: string): Promise<{ bytes: Uint8Array; mime: string }> {
   const res = await fetch(videoUrl, {
     headers: {
-      "User-Agent": UA,
+      "User-Agent": UA_DEFAULT,
       Referer: referer,
       Accept: "*/*",
       Range: "bytes=0-",
@@ -98,8 +101,24 @@ export const transcribeUrl = createServerFn({ method: "POST" })
       throw new Error("Saat ini hanya mendukung link TikTok dan Instagram Reels.");
     }
 
-    const html = await fetchHtml(data.url);
-    const videoUrl = extractVideoUrl(html, platform);
+    // For Instagram, try facebookexternalhit first (returns proper OG tags for public reels)
+    let html: string;
+    let videoUrl: string | null = null;
+    if (platform === "instagram") {
+      try {
+        html = await fetchHtml(data.url, UA_FACEBOOK);
+        videoUrl = extractVideoUrl(html, platform);
+      } catch {
+        /* fallback below */
+      }
+      if (!videoUrl) {
+        html = await fetchHtml(data.url, UA_DEFAULT);
+        videoUrl = extractVideoUrl(html, platform);
+      }
+    } else {
+      html = await fetchHtml(data.url, UA_DEFAULT);
+      videoUrl = extractVideoUrl(html, platform);
+    }
     if (!videoUrl) {
       throw new Error(
         platform === "instagram"
