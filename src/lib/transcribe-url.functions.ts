@@ -101,8 +101,24 @@ export const transcribeUrl = createServerFn({ method: "POST" })
       throw new Error("Saat ini hanya mendukung link TikTok dan Instagram Reels.");
     }
 
-    const html = await fetchHtml(data.url);
-    const videoUrl = extractVideoUrl(html, platform);
+    // For Instagram, try facebookexternalhit first (returns proper OG tags for public reels)
+    let html: string;
+    let videoUrl: string | null = null;
+    if (platform === "instagram") {
+      try {
+        html = await fetchHtml(data.url, UA_FACEBOOK);
+        videoUrl = extractVideoUrl(html, platform);
+      } catch {
+        /* fallback below */
+      }
+      if (!videoUrl) {
+        html = await fetchHtml(data.url, UA_DEFAULT);
+        videoUrl = extractVideoUrl(html, platform);
+      }
+    } else {
+      html = await fetchHtml(data.url, UA_DEFAULT);
+      videoUrl = extractVideoUrl(html, platform);
+    }
     if (!videoUrl) {
       throw new Error(
         platform === "instagram"
