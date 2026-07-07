@@ -58,6 +58,9 @@ export type Database = {
           created_at: string
           id: string
           project_id: string
+          source_mime: string | null
+          source_name: string | null
+          source_path: string | null
           title: string
           type: string
           updated_at: string
@@ -67,6 +70,9 @@ export type Database = {
           created_at?: string
           id?: string
           project_id: string
+          source_mime?: string | null
+          source_name?: string | null
+          source_path?: string | null
           title: string
           type: string
           updated_at?: string
@@ -76,6 +82,9 @@ export type Database = {
           created_at?: string
           id?: string
           project_id?: string
+          source_mime?: string | null
+          source_name?: string | null
+          source_path?: string | null
           title?: string
           type?: string
           updated_at?: string
