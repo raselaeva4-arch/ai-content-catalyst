@@ -5,8 +5,10 @@ const InputSchema = z.object({
   url: z.string().url().min(1).max(2048),
 });
 
-const UA =
+const UA_DEFAULT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+// Instagram serves complete OG tags (including og:video) to social crawlers
+const UA_FACEBOOK = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)";
 
 function detectPlatform(url: string): "tiktok" | "instagram" | "other" {
   if (/tiktok\.com|vm\.tiktok\.com|vt\.tiktok\.com/i.test(url)) return "tiktok";
@@ -14,11 +16,11 @@ function detectPlatform(url: string): "tiktok" | "instagram" | "other" {
   return "other";
 }
 
-async function fetchHtml(url: string): Promise<string> {
+async function fetchHtml(url: string, ua: string): Promise<string> {
   const res = await fetch(url, {
     redirect: "follow",
     headers: {
-      "User-Agent": UA,
+      "User-Agent": ua,
       Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
     },
@@ -26,6 +28,7 @@ async function fetchHtml(url: string): Promise<string> {
   if (!res.ok) throw new Error(`Gagal mengambil halaman (${res.status}). Link mungkin private/diblokir.`);
   return await res.text();
 }
+
 
 function unescapeJson(s: string): string {
   return s.replace(/\\u002F/g, "/").replace(/\\\//g, "/").replace(/\\"/g, '"');
