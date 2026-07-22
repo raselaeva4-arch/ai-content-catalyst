@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
@@ -9,13 +9,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast, Toaster } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
 
+function sanitizeNext(next: unknown): string {
+  if (typeof next !== "string" || !next.startsWith("/") || next.startsWith("//")) return "/";
+  return next;
+}
+
 export const Route = createFileRoute("/auth")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" ? s.next : undefined,
+  }),
   component: AuthPage,
   head: () => ({ meta: [{ title: "Sign In — KeywordForge" }] }),
 });
 
 function AuthPage() {
   const navigate = useNavigate();
+  const search = useSearch({ from: "/auth" });
+  const next = sanitizeNext(search.next);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -23,13 +33,13 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/", replace: true });
+      if (data.session) window.location.replace(next);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) navigate({ to: "/", replace: true });
+      if (session) window.location.replace(next);
     });
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [next]);
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
@@ -46,7 +56,7 @@ function AuthPage() {
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: window.location.origin + next,
         data: { full_name: name },
       },
     });
@@ -58,13 +68,16 @@ function AuthPage() {
   async function handleGoogle() {
     setLoading(true);
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: window.location.origin + next,
     });
     if (result.error) {
       setLoading(false);
       toast.error(result.error.message || "Gagal sign in dengan Google");
     }
   }
+
+  // Keep unused-var quiet — navigate reserved for future use.
+  void navigate;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">

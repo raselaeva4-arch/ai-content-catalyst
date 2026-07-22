@@ -1,0 +1,184 @@
+{
+  "version": 1,
+  "sdk_version": "0.24.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://tdolpgpnywlvvyugoecp.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "keyword-explorer-mcp",
+      "version": "0.1.0",
+      "title": "Ebran Keyword Explorer MCP"
+    },
+    "tools": [
+      {
+        "name": "list_projects",
+        "title": "List projects",
+        "description": "List all projects owned by the signed-in user.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_knowledge_base",
+        "title": "List knowledge base entries",
+        "description": "List all knowledge base entries for a given project owned by the signed-in user.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project UUID to list KB entries for."
+            }
+          },
+          "required": [
+            "project_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_transcripts",
+        "title": "List transcripts",
+        "description": "List transcripts saved for a project (from uploaded media or Reel/TikTok links).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project UUID to list transcripts for."
+            }
+          },
+          "required": [
+            "project_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_saved_generations",
+        "title": "List saved keyword/title generations",
+        "description": "List saved keyword & article-title analyses (history) for a project.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project UUID to list saved generations for."
+            }
+          },
+          "required": [
+            "project_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_saved_generation",
+        "title": "Get saved generation",
+        "description": "Fetch a single saved keyword/title generation by ID, including extracted data and source inputs.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Saved generation UUID."
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_knowledge_base_entry",
+        "title": "Create knowledge base entry",
+        "description": "Add a new knowledge base entry (title + content) to a project for the signed-in user.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project UUID to add the entry to."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Short title for the KB entry."
+            },
+            "content": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Full text content of the KB entry."
+            },
+            "category": {
+              "type": "string",
+              "description": "Optional category label."
+            }
+          },
+          "required": [
+            "project_id",
+            "title",
+            "content"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

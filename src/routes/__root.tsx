@@ -152,7 +152,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!checked) return;
     const onAuth = location.pathname === "/auth";
-    if (!hasSession && !onAuth) navigate({ to: "/auth", replace: true });
+    // Preserve the full path (including the consent authorization_id) so the
+    // OAuth consent flow returns the user to the same URL after sign-in.
+    const isConsent = location.pathname.startsWith("/.lovable/oauth/consent");
+    if (!hasSession && !onAuth) {
+      if (isConsent) return; // consent route handles its own redirect with `next`
+      navigate({ to: "/auth", replace: true });
+    }
     if (hasSession && onAuth) navigate({ to: "/", replace: true });
   }, [checked, hasSession, location.pathname, navigate]);
 
