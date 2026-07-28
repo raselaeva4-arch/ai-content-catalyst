@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { FolderKanban, Settings, Loader2, LogOut } from "lucide-react";
@@ -17,11 +17,15 @@ export function ProjectSwitcher() {
   const [items, setItems] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const bootstrapped = useRef(false);
+
   useEffect(() => {
+    if (bootstrapped.current) return;
+    bootstrapped.current = true;
     let cancelled = false;
     (async () => {
       try {
-        let res = await listFn();
+        const res = await listFn();
         let list = res.items as Project[];
         if (list.length === 0) {
           const created = await createFn({ data: { name: "My Project", description: null } });
@@ -32,6 +36,7 @@ export function ProjectSwitcher() {
         if (!list.some((p) => p.id === projectId)) setProjectId(list[0].id);
       } catch (e) {
         console.error(e);
+        bootstrapped.current = false;
       } finally {
         if (!cancelled) setLoading(false);
       }
