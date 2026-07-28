@@ -14,6 +14,7 @@ import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ArticlesRouteImport } from './routes/articles'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HistoryIdRouteImport } from './routes/history.$id'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -44,6 +45,11 @@ const HistoryRoute = HistoryRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArticlesRoute = ArticlesRouteImport.update({
+  id: '/articles',
+  path: '/articles',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -82,6 +88,7 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/articles': typeof ArticlesRoute
   '/auth': typeof AuthRoute
   '/history': typeof HistoryRouteWithChildren
   '/mcp': typeof McpRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/articles': typeof ArticlesRoute
   '/auth': typeof AuthRoute
   '/history': typeof HistoryRouteWithChildren
   '/mcp': typeof McpRoute
@@ -109,6 +117,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/articles': typeof ArticlesRoute
   '/auth': typeof AuthRoute
   '/history': typeof HistoryRouteWithChildren
   '/mcp': typeof McpRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/articles'
     | '/auth'
     | '/history'
     | '/mcp'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/articles'
     | '/auth'
     | '/history'
     | '/mcp'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/articles'
     | '/auth'
     | '/history'
     | '/mcp'
@@ -164,6 +176,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ArticlesRoute: typeof ArticlesRoute
   AuthRoute: typeof AuthRoute
   HistoryRoute: typeof HistoryRouteWithChildren
   McpRoute: typeof McpRoute
@@ -210,6 +223,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/articles': {
+      id: '/articles'
+      path: '/articles'
+      fullPath: '/articles'
+      preLoaderRoute: typeof ArticlesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -270,6 +290,7 @@ const HistoryRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ArticlesRoute: ArticlesRoute,
   AuthRoute: AuthRoute,
   HistoryRoute: HistoryRouteWithChildren,
   McpRoute: McpRoute,

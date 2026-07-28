@@ -52,6 +52,63 @@ export type Database = {
           },
         ]
       }
+      articles: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          id: string
+          main_keyword: string | null
+          meta_description: string | null
+          notes: string | null
+          outline: Json
+          project_id: string
+          secondary_keywords: Json
+          slug: string | null
+          status: string
+          title: string
+          topic: string | null
+          updated_at: string
+          word_count: number
+        }
+        Insert: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          main_keyword?: string | null
+          meta_description?: string | null
+          notes?: string | null
+          outline?: Json
+          project_id: string
+          secondary_keywords?: Json
+          slug?: string | null
+          status?: string
+          title: string
+          topic?: string | null
+          updated_at?: string
+          word_count?: number
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          main_keyword?: string | null
+          meta_description?: string | null
+          notes?: string | null
+          outline?: Json
+          project_id?: string
+          secondary_keywords?: Json
+          slug?: string | null
+          status?: string
+          title?: string
+          topic?: string | null
+          updated_at?: string
+          word_count?: number
+        }
+        Relationships: []
+      }
       knowledge_base: {
         Row: {
           content: string

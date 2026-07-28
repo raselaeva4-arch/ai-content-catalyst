@@ -326,9 +326,13 @@ function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <ProjectSwitcher />
+            <Link to="/articles">
+              <Button variant="outline" size="sm"><FileText className="size-3.5 mr-1.5" />Artikel SEO</Button>
+            </Link>
             <Link to="/transcripts">
               <Button variant="outline" size="sm"><Mic className="size-3.5 mr-1.5" />Transcripts</Button>
             </Link>
+
             <Link to="/history">
               <Button variant="outline" size="sm"><History className="size-3.5 mr-1.5" />History</Button>
             </Link>
