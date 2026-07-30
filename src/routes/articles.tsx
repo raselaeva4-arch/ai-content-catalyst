@@ -247,23 +247,24 @@ function ArticlesPage() {
       <Toaster richColors position="top-right" />
 
       <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-1">
-            <Link to="/"><Button variant="ghost" size="icon"><ArrowLeft className="size-4" /></Button></Link>
-            <div className="size-9 rounded-lg flex items-center justify-center text-primary-foreground" style={{ background: "var(--gradient-brand)" }}>
+        <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <Link to="/"><Button variant="ghost" size="icon" className="size-8 shrink-0"><ArrowLeft className="size-4" /></Button></Link>
+            <div className="hidden size-9 shrink-0 items-center justify-center rounded-lg text-primary-foreground sm:flex" style={{ background: "var(--gradient-brand)" }}>
               <FileText className="size-5" />
             </div>
-            <div className="min-w-1">
-              <h1 className="text-lg font-semibold tracking-tight">Artikel SEO</h1>
-              <p className="text-xs text-muted-foreground">{items.length} artikel tersimpan di project ini</p>
+            <div className="min-w-0">
+              <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">Artikel SEO</h1>
+              <p className="truncate text-xs text-muted-foreground">{items.length} artikel tersimpan di project ini</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <ProjectSwitcher />
-            <Link to="/history"><Button variant="outline" size="sm">History</Button></Link>
+            <Link to="/history"><Button variant="outline" size="sm" className="hidden h-8 sm:inline-flex">History</Button></Link>
           </div>
         </div>
       </header>
+
 
       <main className="max-w-6xl mx-auto px-6 py-8 grid gap-6 lg:grid-cols-[380px_1fr]">
         <Card className="p-6 space-y-4 h-fit lg:sticky lg:top-24">
