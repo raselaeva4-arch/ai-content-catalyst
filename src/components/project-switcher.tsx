@@ -67,12 +67,33 @@ export function ProjectSwitcher() {
 
   if (!mounted) return null;
 
+  if (failed) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-8 gap-2 text-xs"
+        onClick={() => { setLoading(true); setReloadKey((k) => k + 1); }}
+      >
+        <FolderKanban className="size-3.5" /> Muat ulang project
+      </Button>
+    );
+  }
+
   return (
-    <div className="flex items-center gap-2">
-      <FolderKanban className="size-3.5 text-muted-foreground" />
-      <Select value={projectId} onValueChange={setProjectId}>
-        <SelectTrigger className="h-8 w-[180px] text-xs">
-          {loading ? <Loader2 className="size-3 animate-spin" /> : <SelectValue />}
+    <div className="flex min-w-0 items-center gap-1">
+      <Select value={items.length ? projectId : undefined} onValueChange={setProjectId} disabled={loading}>
+        <SelectTrigger className="h-8 w-[150px] min-w-0 text-xs sm:w-[190px]">
+          {loading ? (
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="size-3 animate-spin" /> Memuat…
+            </span>
+          ) : (
+            <span className="flex min-w-0 items-center gap-2">
+              <FolderKanban className="size-3.5 shrink-0 text-muted-foreground" />
+              <SelectValue placeholder="Pilih project" />
+            </span>
+          )}
         </SelectTrigger>
         <SelectContent>
           {items.map((p) => (
@@ -81,11 +102,11 @@ export function ProjectSwitcher() {
         </SelectContent>
       </Select>
       <Link to="/projects">
-        <Button variant="ghost" size="icon" className="size-8" title="Kelola Projects">
+        <Button variant="ghost" size="icon" className="size-8 shrink-0" title="Kelola Projects">
           <Settings className="size-3.5" />
         </Button>
       </Link>
-      <Button variant="ghost" size="icon" className="size-8" title="Sign out" onClick={signOut}>
+      <Button variant="ghost" size="icon" className="size-8 shrink-0" title="Sign out" onClick={signOut}>
         <LogOut className="size-3.5" />
       </Button>
     </div>
