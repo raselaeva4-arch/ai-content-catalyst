@@ -16,6 +16,8 @@ export function ProjectSwitcher() {
   const createFn = useServerFn(createProject);
   const [items, setItems] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const bootstrapped = useRef(false);
 
@@ -25,6 +27,7 @@ export function ProjectSwitcher() {
     let cancelled = false;
     (async () => {
       try {
+        setFailed(false);
         const res = await listFn();
         let list = res.items as Project[];
         if (list.length === 0) {
@@ -37,12 +40,14 @@ export function ProjectSwitcher() {
       } catch (e) {
         console.error(e);
         bootstrapped.current = false;
+        if (!cancelled) setFailed(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [listFn, createFn, projectId, setProjectId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadKey]);
 
   // Real-time sync: projects changes
   useEffect(() => {
