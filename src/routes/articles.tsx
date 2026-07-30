@@ -10,6 +10,8 @@ import {
   Sparkles,
   Trash2,
   Copy,
+  Code2,
+
   Pencil,
   X,
 } from "lucide-react";
@@ -339,7 +341,9 @@ function ArticlesPage() {
                   <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(draft.content); toast.success("Artikel disalin."); }}>
                     <Copy className="size-3.5 mr-1.5" />Salin
                   </Button>
+                  <HtmlExportDialog article={draft} />
                   <Button size="sm" onClick={onSave} disabled={saving}>
+
                     {saving ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Save className="size-3.5 mr-1.5" />}
                     {editingId ? "Update" : "Simpan"}
                   </Button>
@@ -401,8 +405,17 @@ function ArticlesPage() {
                     </div>
                   </div>
                   <div className="flex gap-1 shrink-0">
+                    <HtmlExportDialog
+                      article={row}
+                      trigger={
+                        <Button variant="ghost" size="icon" title="Export HTML">
+                          <Code2 className="size-4" />
+                        </Button>
+                      }
+                    />
                     <Button variant="ghost" size="icon" onClick={() => loadForEdit(row)}><Pencil className="size-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => onDelete(row.id)}><Trash2 className="size-4 text-destructive" /></Button>
+
                   </div>
                 </Card>
               ))
