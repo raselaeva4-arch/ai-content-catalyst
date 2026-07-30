@@ -35,6 +35,8 @@ import {
 } from "@/lib/articles.functions";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { ProjectSwitcher } from "@/components/project-switcher";
+import { HtmlExportDialog } from "@/components/html-export-dialog";
+
 
 function ErrorComponent({ error, reset }: { error: any; reset: () => void }) {
   return (
