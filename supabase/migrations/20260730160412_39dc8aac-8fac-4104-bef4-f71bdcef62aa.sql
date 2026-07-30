@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.owns_project(uuid) FROM anon;
