@@ -157,7 +157,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const isConsent = location.pathname.startsWith("/.lovable/oauth/consent");
     if (!hasSession && !onAuth) {
       if (isConsent) return; // consent route handles its own redirect with `next`
-      navigate({ to: "/auth", replace: true });
+      navigate({ to: "/auth", search: { next: undefined }, replace: true });
     }
     if (hasSession && onAuth) navigate({ to: "/", replace: true });
   }, [checked, hasSession, location.pathname, navigate]);
