@@ -1,6 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  buildSystemPrompt,
+  ARTICLE_TOOL_SCHEMA,
+  ARS_TONE_RULES,
+  computeReadability,
+  type ToneLevel,
+} from "@/lib/articles.prompt";
+
+const ToneEnum = z.enum(["santai", "praktis", "formal"]);
 
 const GenerateSchema = z.object({
   project_id: z.string().uuid(),
@@ -10,6 +19,7 @@ const GenerateSchema = z.object({
   category: z.enum(["Mentor", "Investor", "Leader"]).optional().default("Leader"),
   word_target: z.number().int().min(400).max(2500).optional().default(900),
   extra_notes: z.string().max(5000).optional().default(""),
+  tone_level: ToneEnum.optional().default("praktis"),
 });
 
 const SaveSchema = z.object({
@@ -26,58 +36,11 @@ const SaveSchema = z.object({
   word_count: z.number().int().min(0).default(0),
   status: z.enum(["draft", "final"]).default("draft"),
   notes: z.string().max(10000).nullable().optional(),
+  tone_level: ToneEnum.default("praktis"),
+  tone_insight: z.any().optional().default({}),
 });
 
 const UpdateSchema = SaveSchema.partial().extend({ id: z.string().uuid() });
-
-const SYSTEM_PROMPT = `Kamu adalah penulis artikel SEO profesional berbahasa Indonesia untuk media bisnis/ekonomi.
-
-FORMAT WAJIB (mengikuti contoh artikel referensi brand):
-- H1: judul utama, click-worthy, mengandung main keyword, gaya Title Case.
-- Paragraf pembuka (lead): 2 paragraf. Paragraf pertama menjelaskan fenomena/konteks dan HARUS memuat main keyword secara natural di kalimat pertama atau kedua. Paragraf kedua memperkenalkan tokoh/persona sebagai sumber perspektif.
-- 3-5 sub-bagian dengan heading H2 yang deskriptif dan mengandung keyword turunan.
-- Setiap sub-bagian terdiri dari 2 paragraf (masing-masing 3-5 kalimat). TIDAK ada bullet list di badan artikel — semua narasi paragraf mengalir, gaya jurnalistik feature.
-- Boleh menyisipkan 1 kutipan langsung dari tokoh (dalam tanda kutip) bila relevan.
-- Penutup: 2-3 paragraf berisi kesimpulan, pesan utama, dan ajakan/aspirasi. Tanpa heading "Kesimpulan".
-
-KAIDAH SEO:
-- Kepadatan main keyword ~1-1.5%, tersebar natural (judul, lead, minimal satu H2, penutup).
-- Gunakan secondary keywords/LSI secara alami.
-- Kalimat aktif, maksimal ~20-25 kata per kalimat, paragraf pendek (3-5 kalimat).
-- Meta description 140-158 karakter, mengandung main keyword.
-- Slug pendek, huruf kecil, dipisah tanda hubung.
-
-PERSONA & SUDUT PANDANG:
-- Gunakan knowledge base (playbook, persona, style guide, red line) sebagai sumber sudut pandang, brand voice, dan batasan. Jangan melanggar red line.
-- Tulis dengan sudut pandang orang ketiga yang menghormati tokoh (mis. "Beliau menekankan...").
-- Jangan mengarang data statistik, angka, atau kutipan yang tidak ada di konteks. Jika tidak ada data, tulis kualitatif.
-
-Output HARUS lewat function call. Isi 'content' dalam Markdown: '# Judul', paragraf, '## Sub-judul', paragraf.`;
-
-const TOOL_SCHEMA = {
-  type: "object",
-  properties: {
-    title: { type: "string" },
-    slug: { type: "string" },
-    meta_description: { type: "string" },
-    main_keyword: { type: "string" },
-    secondary_keywords: { type: "array", items: { type: "string" } },
-    outline: { type: "array", items: { type: "string" } },
-    category: { type: "string", enum: ["Mentor", "Investor", "Leader"] },
-    content: { type: "string" },
-  },
-  required: [
-    "title",
-    "slug",
-    "meta_description",
-    "main_keyword",
-    "secondary_keywords",
-    "outline",
-    "category",
-    "content",
-  ],
-  additionalProperties: false,
-};
 
 export const generateArticle = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
