@@ -67,6 +67,8 @@ export type Database = {
           slug: string | null
           status: string
           title: string
+          tone_insight: Json
+          tone_level: string
           topic: string | null
           updated_at: string
           word_count: number
@@ -85,6 +87,8 @@ export type Database = {
           slug?: string | null
           status?: string
           title: string
+          tone_insight?: Json
+          tone_level?: string
           topic?: string | null
           updated_at?: string
           word_count?: number
@@ -103,6 +107,8 @@ export type Database = {
           slug?: string | null
           status?: string
           title?: string
+          tone_insight?: Json
+          tone_level?: string
           topic?: string | null
           updated_at?: string
           word_count?: number
