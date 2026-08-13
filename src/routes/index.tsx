@@ -1,8 +1,13 @@
+Agar tombol navigasi ke halaman `/rework` muncul di dashboard utama kamu, perbarui isi file `src/routes/index.tsx` dengan menambahkan import ikon `RefreshCw` dan tombol tautan menu Rework pada bagian header.
+
+Berikut adalah kode lengkap `src/routes/index.tsx` yang sudah disesuaikan:
+
+```tsx
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useRef, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast, Toaster } from "sonner";
-import { Sparkles, Link2, Upload, BookOpen, Trash2, Plus, Loader2, TrendingUp, Hash, FileText, Lightbulb, Tag, Mic, CheckCircle2, Save, History, Video, Square } from "lucide-react";
+import { Sparkles, Link2, Upload, BookOpen, Trash2, Plus, Loader2, TrendingUp, Hash, FileText, Lightbulb, Tag, Mic, CheckCircle2, Save, History, Video, Square, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -143,7 +148,6 @@ function Dashboard() {
       }
       setFiles((prev) => [...prev, ...uploaded]);
       if (uploaded.length) toast.success(`${uploaded.length} file berhasil diupload`);
-      // Auto-transcribe audio/video
       for (const u of uploaded) {
         if (/^(audio|video)\//.test(u.mime)) {
           void runTranscribe(u.path, u.name, u.mime);
@@ -200,10 +204,8 @@ function Dashboard() {
           if (error) throw new Error(error.message);
           setFiles((prev) => [...prev, { path, name, mime: blobMime, transcribing: true }]);
           toast.success("Rekaman terupload — AI sedang transcribing...");
-          // Transcribe via AI
           const tr = await transcribeFn({ data: { path, name, mime: blobMime } });
           setFiles((prev) => prev.map((f) => (f.path === path ? { ...f, transcript: tr.transcript, editedTranscript: tr.transcript, transcribing: false } : f)));
-          // Auto-save to transcripts DB
           try {
             const saved = await createTranscriptFn({
               data: {
@@ -247,8 +249,6 @@ function Dashboard() {
     setRecording(false);
   }, []);
 
-
-
   const onAnalyze = useCallback(async () => {
     const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
     if (!cleanUrls.length && !files.length && !notes.trim()) {
@@ -261,7 +261,6 @@ function Dashboard() {
     }
     setAnalyzing(true); setResult(null); setTrendData(null); setSavedId(null);
     try {
-      // Inject transcripts into notes so AI sees them
       const transcriptBlock = files
         .filter((f) => f.transcript)
         .map((f) => `=== TRANSKRIP ${f.name} ===\n${f.editedTranscript ?? f.transcript}`)
@@ -271,7 +270,6 @@ function Dashboard() {
       const res = await analyze({ data: { project_id: projectId, urls: cleanUrls, files: payloadFiles, notes: mergedNotes } });
       setResult(res.result);
       toast.success("Analisis selesai!");
-      // Auto-fetch trends for main keywords
       setLoadingTrends(true);
       try {
         const t = await trends({ data: { keywords: res.result.main_keywords.map((k: any) => k.keyword) } });
@@ -332,7 +330,9 @@ function Dashboard() {
             <Link to="/transcripts">
               <Button variant="outline" size="sm"><Mic className="size-3.5 mr-1.5" />Transcripts</Button>
             </Link>
-
+            <Link to="/rework">
+              <Button variant="outline" size="sm"><RefreshCw className="size-3.5 mr-1.5" />Rework</Button>
+            </Link>
             <Link to="/history">
               <Button variant="outline" size="sm"><History className="size-3.5 mr-1.5" />History</Button>
             </Link>
@@ -407,7 +407,6 @@ function Dashboard() {
                 </p>
               </TabsContent>
 
-
               <TabsContent value="record" className="mt-4 space-y-3">
                 <div className="rounded-lg border bg-accent/20 p-3">
                   <div className="flex items-center gap-2 mb-1">
@@ -447,7 +446,6 @@ function Dashboard() {
 
               <TabsContent value="files" className="mt-4 space-y-3">
                 <label className="block border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-accent/30 transition-colors">
-
                   <Upload className="size-6 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm font-medium">Klik untuk upload file</p>
                   <p className="text-xs text-muted-foreground mt-1">Image, PDF, Audio, Video, DOCX, MD, TXT, HTML (max 20MB)</p>
@@ -767,3 +765,5 @@ function KnowledgeBasePanel({ projectId, items, onSave, onSaveFile, onDelete }: 
     </Card>
   );
 }
+
+```
