@@ -250,14 +250,14 @@ function ReworkPage() {
                   <label className="block border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-accent/30 transition-colors">
                     <Upload className="size-6 mx-auto mb-2 text-muted-foreground" />
                     <p className="text-sm font-medium">
-                      {uploading ? "Mengupload..." : extracting ? "Mengekstrak dengan AI..." : "Klik untuk upload file (PDF, Docx, Image, Text)"}
+                      {uploading ? "Mengupload..." : extracting ? "Mengekstrak dengan AI..." : "Klik untuk upload file (PDF, Image, Text)"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">Maksimal 20MB</p>
                     <input 
                       type="file" 
                       className="hidden" 
                       onChange={handleFileChange}
-                      accept=".pdf,.docx,.txt,.doc,image/*"
+                      accept=".pdf,.txt,image/*" 
                       disabled={uploading || extracting}
                     />
                   </label>
