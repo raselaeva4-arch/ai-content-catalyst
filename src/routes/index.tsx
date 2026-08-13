@@ -1,8 +1,3 @@
-Agar tombol navigasi ke halaman `/rework` muncul di dashboard utama kamu, perbarui isi file `src/routes/index.tsx` dengan menambahkan import ikon `RefreshCw` dan tombol tautan menu Rework pada bagian header.
-
-Berikut adalah kode lengkap `src/routes/index.tsx` yang sudah disesuaikan:
-
-```tsx
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useRef, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -67,6 +62,7 @@ function Dashboard() {
       .catch(() => {});
     return () => { cancelled = true; };
   }, [projectId, listKbFn]);
+
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [reelUrl, setReelUrl] = useState("");
@@ -765,5 +761,3 @@ function KnowledgeBasePanel({ projectId, items, onSave, onSaveFile, onDelete }: 
     </Card>
   );
 }
-
-```
