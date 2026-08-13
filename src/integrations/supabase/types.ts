@@ -52,6 +52,77 @@ export type Database = {
           },
         ]
       }
+      article_reworks: {
+        Row: {
+          changes: Json
+          created_at: string
+          crosscheck: Json
+          id: string
+          manual_prompt: string
+          original_content: string
+          project_id: string
+          revision_notes: Json
+          revision_notes_text: string
+          reworked_content: string
+          reworked_title: string | null
+          source_mime: string | null
+          source_name: string | null
+          source_path: string | null
+          source_type: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          changes?: Json
+          created_at?: string
+          crosscheck?: Json
+          id?: string
+          manual_prompt?: string
+          original_content?: string
+          project_id: string
+          revision_notes?: Json
+          revision_notes_text?: string
+          reworked_content?: string
+          reworked_title?: string | null
+          source_mime?: string | null
+          source_name?: string | null
+          source_path?: string | null
+          source_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          changes?: Json
+          created_at?: string
+          crosscheck?: Json
+          id?: string
+          manual_prompt?: string
+          original_content?: string
+          project_id?: string
+          revision_notes?: Json
+          revision_notes_text?: string
+          reworked_content?: string
+          reworked_title?: string | null
+          source_mime?: string | null
+          source_name?: string | null
+          source_path?: string | null
+          source_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_reworks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       articles: {
         Row: {
           category: string | null
