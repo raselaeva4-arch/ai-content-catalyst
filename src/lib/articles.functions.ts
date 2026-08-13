@@ -82,7 +82,7 @@ export const generateArticle = createServerFn({ method: "POST" })
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: buildSystemPrompt(data.tone_level as ToneLevel) },
           { role: "user", content: userText },
         ],
         tools: [
@@ -91,7 +91,7 @@ export const generateArticle = createServerFn({ method: "POST" })
             function: {
               name: "produce_article",
               description: "Output artikel SEO terstruktur",
-              parameters: TOOL_SCHEMA,
+              parameters: ARTICLE_TOOL_SCHEMA,
             },
           },
         ],
