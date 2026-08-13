@@ -74,7 +74,7 @@ export const generateArticle = createServerFn({ method: "POST" })
     userText += `Kategori: ${data.category}\n`;
     userText += `Target panjang: sekitar ${data.word_target} kata\n`;
     if (data.extra_notes) userText += `Catatan tambahan: ${data.extra_notes}\n`;
-    userText += `\nTulis artikel SEO lengkap sesuai format dan kaidah di atas.`;
+    userText += `\n${ARS_TONE_RULES}\n\nTulis artikel SEO lengkap sesuai format dan kaidah di atas.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -112,7 +112,10 @@ export const generateArticle = createServerFn({ method: "POST" })
     const article = JSON.parse(args);
     const word_count = String(article.content ?? "").trim().split(/\s+/).filter(Boolean).length;
 
-    return { article: { ...article, word_count } };
+    return {
+      article: { ...article, word_count, tone_level: data.tone_level },
+      readability: computeReadability(String(article.content ?? "")),
+    };
   });
 
 export const listArticles = createServerFn({ method: "POST" })
