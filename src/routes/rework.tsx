@@ -33,10 +33,16 @@ export const Route = createFileRoute("/rework")({
 });
 
 type RevisionNote = {
+  id?: string;
   location?: string;
   note: string;
   type?: string;
+  author?: string | null;
+  commented_at?: string | null;
 };
+
+type GDoc = { id: string; name: string; modifiedTime: string | null; webViewLink: string; owner: string };
+
 
 type ReworkResult = {
   title: string;
