@@ -31,6 +31,8 @@ export const importGoogleDoc = createServerFn({ method: "POST" })
       commented_at: c.commented_at,
       resolved: c.resolved,
       position: i,
+      ai_recommendation: null,
+      ai_result: null,
     }));
 
     let saved: any[] = [];
@@ -72,6 +74,8 @@ export const createDocRevisionNote = createServerFn({ method: "POST" })
         author: z.string().max(200).nullable().optional(),
         commented_at: z.string().nullable().optional(),
         position: z.number().int().default(0),
+        ai_recommendation: z.string().max(20000).nullable().optional(),
+        ai_result: z.string().max(20000).nullable().optional(),
       })
       .parse(d),
   )
@@ -92,6 +96,8 @@ export const updateDocRevisionNote = createServerFn({ method: "POST" })
         author: z.string().max(200).nullable().optional(),
         commented_at: z.string().nullable().optional(),
         resolved: z.boolean().optional(),
+        ai_recommendation: z.string().max(20000).nullable().optional(),
+        ai_result: z.string().max(20000).nullable().optional(),
       })
       .parse(d),
   )
