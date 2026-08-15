@@ -141,9 +141,16 @@ export const runRework = createServerFn({ method: "POST" })
 
     const notesText = data.revision_notes.length
       ? data.revision_notes
-          .map((n, i) => `${i + 1}. [${n.type}]${n.location ? ` (${n.location})` : ""} ${n.note}`)
+          .map((n, i) => {
+            const meta = [n.author ? `oleh ${n.author}` : "", n.commented_at ? `pada ${n.commented_at}` : ""]
+              .filter(Boolean)
+              .join(" ");
+            const section = n.location ? `\n   BAGIAN YANG DIREVISI: "${n.location.slice(0, 1500)}"` : "";
+            return `${i + 1}. [${n.type}]${meta ? ` (${meta})` : ""} APA YANG HARUS DIREVISI: ${n.note}${section}`;
+          })
           .join("\n")
       : "(tidak ada catatan revisi terstruktur)";
+
 
     let userText = "";
     if (kbContext) userText += `=== KNOWLEDGE BASE (persona & style guide) ===\n${kbContext}\n\n`;
