@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Upload, FileText, CheckCircle, ListChecks, RefreshCw, ArrowLeft, Loader2, Trash2, Save, CheckCircle2, Search, Plus, FileSearch, User, Bot } from "lucide-react";
+import { Sparkles, Upload, FileText, CheckCircle, ListChecks, RefreshCw, ArrowLeft, Loader2, Trash2, Save, CheckCircle2, Search, Plus, FileSearch, User, Bot, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -206,7 +206,8 @@ function ReworkPage() {
           section: n.location ?? "", 
           note: n.note ?? "", 
           author: n.author ?? null,
-          // jika backend mendukung kolom ai_recommendation & ai_result, sertakan di sini
+          ai_recommendation: n.ai_recommendation ?? "",
+          ai_result: n.ai_result ?? "",
         },
       });
     } catch (err) {
@@ -227,7 +228,6 @@ function ReworkPage() {
     }
   };
 
-  // AI Action: Regenerate Rekomendasi / Action Plan per catatan
   const handleGenerateRecommendation = async (idx: number) => {
     const note = revisionNotes[idx];
     if (!note.note.trim()) {
@@ -237,7 +237,6 @@ function ReworkPage() {
 
     setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, isGeneratingRec: true } : n)));
     try {
-      // Memanggil AI Review / helper untuk menghasilkan Action Plan
       const res = await reviewFn({
         data: {
           content: `Kutipan: "${note.location || ''}"\nInstruksi Editor: "${note.note}"\nBerikan Action Plan / Rekomendasi langkah konkret singkat untuk menjawab instruksi ini.`,
@@ -254,7 +253,6 @@ function ReworkPage() {
     }
   };
 
-  // AI Action: Regenerate Hasil Proses AI (Kalimat Pengganti & Kontekstual + Browsing info jika perlu)
   const handleGenerateAiResult = async (idx: number) => {
     const note = revisionNotes[idx];
     if (!note.note.trim()) {
@@ -264,7 +262,6 @@ function ReworkPage() {
 
     setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, isGeneratingRes: true } : n)));
     try {
-      // Menjalankan rework parsial untuk item ini dengan kapabilitas riset/browsing konteks
       const res = await reworkFn({
         data: {
           project_id: projectId,
@@ -285,7 +282,6 @@ function ReworkPage() {
     }
   };
 
-  // 1. Handle File Upload & Extraction
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
@@ -324,7 +320,6 @@ function ReworkPage() {
     }
   };
 
-  // 2. AI Review Revision Notes
   const handleAiReviewNotes = async () => {
     if (!articleContent.trim()) {
       toast.error("Konten artikel masih kosong.");
@@ -347,7 +342,6 @@ function ReworkPage() {
     }
   };
 
-  // 3. Run Rework Process
   const handleRunRework = async () => {
     if (!articleContent.trim()) {
       toast.error("Konten artikel wajib diisi atau diekstrak terlebih dahulu.");
@@ -384,7 +378,6 @@ function ReworkPage() {
     }
   };
 
-  // 4. Save to Database
   const handleSaveToDb = async () => {
     if (!result) return;
     setSaving(true);
@@ -459,9 +452,21 @@ function ReworkPage() {
               <CardContent className="px-0 space-y-4">
                 {/* Google Docs Search & Import */}
                 <div className="space-y-3 pb-4 border-b">
-                  <label className="text-xs font-medium flex items-center gap-1.5">
-                    <FileSearch className="size-3.5 text-primary" /> Import dari Google Docs
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium flex items-center gap-1.5">
+                      <FileSearch className="size-3.5 text-primary" /> Cari & Import Google Docs
+                    </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => window.open(`https://drive.google.com/drive/search?q=${encodeURIComponent(docQuery)}`, "_blank")}
+                    >
+                      <ExternalLink className="size-3 text-blue-600" /> Buka Google Drive
+                    </Button>
+                  </div>
+
                   <div className="flex gap-2">
                     <input
                       type="text"
