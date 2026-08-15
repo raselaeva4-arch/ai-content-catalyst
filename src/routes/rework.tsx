@@ -88,6 +88,134 @@ function ReworkPage() {
   // Result state
   const [result, setResult] = useState<ReworkResult | null>(null);
 
+  // Google Docs states
+  const searchDocsFn = useServerFn(searchGoogleDocs);
+  const importDocFn = useServerFn(importGoogleDoc);
+  const listNotesFn = useServerFn(listDocRevisionNotes);
+  const createNoteFn = useServerFn(createDocRevisionNote);
+  const updateNoteFn = useServerFn(updateDocRevisionNote);
+  const deleteNoteFn = useServerFn(deleteDocRevisionNote);
+
+  const [docQuery, setDocQuery] = useState("");
+  const [docResults, setDocResults] = useState<GDoc[]>([]);
+  const [docSearching, setDocSearching] = useState(false);
+  const [docImporting, setDocImporting] = useState<string | null>(null);
+  const [activeDoc, setActiveDoc] = useState<GDoc | null>(null);
+
+  const toNote = (row: any): RevisionNote => ({
+    id: row.id,
+    location: row.section ?? "",
+    note: row.note ?? "",
+    type: "comment",
+    author: row.author ?? null,
+    commented_at: row.commented_at ?? null,
+  });
+
+  const loadSavedNotes = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const res = await listNotesFn({ data: { project_id: projectId } });
+      if (res.items.length) {
+        setRevisionNotes(res.items.map(toNote));
+        const first: any = res.items[0];
+        if (first?.doc_id)
+          setActiveDoc({
+            id: first.doc_id,
+            name: first.doc_name ?? "Google Doc",
+            webViewLink: first.doc_url ?? "",
+            modifiedTime: null,
+            owner: "",
+          });
+      }
+    } catch {
+      /* diamkan: catatan tersimpan opsional */
+    }
+  }, [projectId, listNotesFn]);
+
+  useEffect(() => {
+    void loadSavedNotes();
+  }, [loadSavedNotes]);
+
+  const handleSearchDocs = async () => {
+    setDocSearching(true);
+    try {
+      const res = await searchDocsFn({ data: { query: docQuery } });
+      setDocResults(res.items as GDoc[]);
+      if (!res.items.length) toast.info("Tidak ada Google Doc yang cocok.");
+    } catch (err) {
+      toast.error("Gagal mencari Google Doc: " + (err as Error).message);
+    } finally {
+      setDocSearching(false);
+    }
+  };
+
+  const handleImportDoc = async (doc: GDoc) => {
+    setDocImporting(doc.id);
+    try {
+      const res = await importDocFn({ data: { project_id: projectId, doc_id: doc.id } });
+      setActiveDoc(doc);
+      setArticleTitle(res.doc.name);
+      setArticleContent(res.content);
+      setRevisionNotes((res.notes as any[]).map(toNote));
+      setDocResults([]);
+      toast.success(`Doc "${res.doc.name}" dibaca. ${res.notes.length} komentar tersimpan sebagai catatan revisi.`);
+    } catch (err) {
+      toast.error("Gagal membaca Google Doc: " + (err as Error).message);
+    } finally {
+      setDocImporting(null);
+    }
+  };
+
+  const handleAddNote = async () => {
+    try {
+      const res = await createNoteFn({
+        data: {
+          project_id: projectId,
+          doc_id: activeDoc?.id ?? null,
+          doc_name: activeDoc?.name ?? null,
+          doc_url: activeDoc?.webViewLink ?? null,
+          section: "",
+          note: "",
+          author: "Manual",
+          position: revisionNotes.length,
+        },
+      });
+      setRevisionNotes((prev) => [...prev, toNote(res.item)]);
+    } catch (err) {
+      toast.error("Gagal menambah catatan: " + (err as Error).message);
+    }
+  };
+
+  const handleNoteChange = (idx: number, field: "location" | "note" | "author", value: string) => {
+    setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, [field]: value } : n)));
+  };
+
+  const handleNoteBlur = async (idx: number) => {
+    const n = revisionNotes[idx];
+    if (!n?.id) return;
+    try {
+      await updateNoteFn({
+        data: { id: n.id, section: n.location ?? "", note: n.note ?? "", author: n.author ?? null },
+      });
+    } catch (err) {
+      toast.error("Gagal menyimpan perubahan catatan: " + (err as Error).message);
+    }
+  };
+
+  const handleDeleteNote = async (idx: number) => {
+    const n = revisionNotes[idx];
+    setRevisionNotes((prev) => prev.filter((_, i) => i !== idx));
+    if (n?.id) {
+      try {
+        await deleteNoteFn({ data: { id: n.id } });
+      } catch (err) {
+        toast.error("Gagal menghapus catatan: " + (err as Error).message);
+      }
+    }
+  };
+
+
+
   // 1. Handle File Upload & Extraction
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
