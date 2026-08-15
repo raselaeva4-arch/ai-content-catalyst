@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Upload, FileText, CheckCircle, ListChecks, RefreshCw, ArrowLeft, Loader2, Trash2, Save, CheckCircle2 } from "lucide-react";
+import { Sparkles, Upload, FileText, CheckCircle, ListChecks, RefreshCw, ArrowLeft, Loader2, Trash2, Save, CheckCircle2, Search, Plus, FileSearch, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,15 @@ import { Toaster, toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { extractArticleFile, reviewRevisionNotes, runRework, saveRework } from "@/lib/rework.functions";
+import {
+  searchGoogleDocs,
+  importGoogleDoc,
+  listDocRevisionNotes,
+  createDocRevisionNote,
+  updateDocRevisionNote,
+  deleteDocRevisionNote,
+} from "@/lib/gdocs.functions";
+
 
 export const Route = createFileRoute("/rework")({
   component: ReworkPage,
