@@ -113,9 +113,12 @@ export const runRework = createServerFn({ method: "POST" })
               location: z.string().optional().default(""),
               note: z.string(),
               type: z.string().optional().default("other"),
+              author: z.string().nullable().optional(),
+              commented_at: z.string().nullable().optional(),
             }),
           )
           .default([]),
+
         manual_prompt: z.string().max(10000).optional().default(""),
         scope: z.enum(["full", "partial"]).optional().default("full"),
       })
