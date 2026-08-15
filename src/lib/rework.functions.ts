@@ -68,7 +68,7 @@ export const reviewRevisionNotes = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z
       .object({ 
-        content: z.string().min(20).max(200000), 
+        content: z.string().min(1).max(200000), 
         extra_context: z.string().max(10000).optional().default("") 
       })
       .parse(d),
@@ -118,7 +118,7 @@ export const runRework = createServerFn({ method: "POST" })
     z
       .object({
         project_id: z.string().uuid(),
-        content: z.string().min(20).max(200000),
+        content: z.string().min(1).max(200000), // Diperbarui dari min(20) ke min(1)
         title: z.string().max(300).optional().default(""),
         revision_notes: z
           .array(
