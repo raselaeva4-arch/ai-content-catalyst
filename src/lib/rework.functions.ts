@@ -55,7 +55,11 @@ export const extractArticleFile = createServerFn({ method: "POST" })
     return {
       title: String(parsed.title ?? data.name),
       content: String(parsed.article_markdown ?? ""),
-      revision_notes: Array.isArray(parsed.revision_notes) ? parsed.revision_notes : [],
+      revision_notes: Array.isArray(parsed.revision_notes) ? parsed.revision_notes.map((rn: any) => ({
+        ...rn,
+        ai_recommendation: rn.ai_recommendation || "",
+        ai_result: rn.ai_result || "",
+      })) : [],
     };
   });
 
@@ -63,7 +67,10 @@ export const reviewRevisionNotes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
     z
-      .object({ content: z.string().min(20).max(200000), extra_context: z.string().max(10000).optional().default("") })
+      .object({ 
+        content: z.string().min(20).max(200000), 
+        extra_context: z.string().max(10000).optional().default("") 
+      })
       .parse(d),
   )
   .handler(async ({ data }) => {
@@ -71,12 +78,12 @@ export const reviewRevisionNotes = createServerFn({ method: "POST" })
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const json = await callAi(apiKey, {
-      model: "google/gemini-3-flash-preview",
+      model: "google/gemini-2.5-flash",
       messages: [
         {
           role: "system",
           content:
-            "Kamu AI reviewer artikel SEO. Deteksi catatan revisi yang tertulis di dalam teks (komentar, [rev: ...], coretan, TODO, highlight, instruksi editor). Jika tidak ada catatan eksplisit, buat catatan revisi berbasis audit kualitas: struktur SEO, keyword, kejelasan bahasa, jargon berlebih, kalimat panjang, dan tone.\n\n" +
+            "Kamu AI reviewer dan taktik editor SEO. Deteksi catatan revisi atau buat action plan / rekomendasi taktis yang jelas, terstruktur, dan dapat dieksekusi untuk menjawab setiap instruksi editor. Berikan juga draf kalimat pengganti jika memungkinkan.\n\n" +
             ARS_TONE_RULES,
         },
         {
@@ -87,7 +94,7 @@ export const reviewRevisionNotes = createServerFn({ method: "POST" })
       tools: [
         {
           type: "function",
-          function: { name: "extract_article", description: "Catatan revisi hasil review", parameters: EXTRACT_SCHEMA },
+          function: { name: "extract_article", description: "Catatan revisi & rekomendasi AI", parameters: EXTRACT_SCHEMA },
         },
       ],
       tool_choice: { type: "function", function: { name: "extract_article" } },
@@ -96,7 +103,13 @@ export const reviewRevisionNotes = createServerFn({ method: "POST" })
     const args = json.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
     if (!args) throw new Error("AI tidak mengembalikan catatan revisi.");
     const parsed = JSON.parse(args);
-    return { revision_notes: Array.isArray(parsed.revision_notes) ? parsed.revision_notes : [] };
+    return { 
+      revision_notes: Array.isArray(parsed.revision_notes) ? parsed.revision_notes.map((rn: any) => ({
+        ...rn,
+        ai_recommendation: rn.ai_recommendation || rn.note || "",
+        ai_result: rn.ai_result || "",
+      })) : [] 
+    };
   });
 
 export const runRework = createServerFn({ method: "POST" })
@@ -115,10 +128,11 @@ export const runRework = createServerFn({ method: "POST" })
               type: z.string().optional().default("other"),
               author: z.string().nullable().optional(),
               commented_at: z.string().nullable().optional(),
+              ai_recommendation: z.string().optional().nullable(),
+              ai_result: z.string().optional().nullable(),
             }),
           )
           .default([]),
-
         manual_prompt: z.string().max(10000).optional().default(""),
         scope: z.enum(["full", "partial"]).optional().default("full"),
       })
@@ -145,32 +159,35 @@ export const runRework = createServerFn({ method: "POST" })
             const meta = [n.author ? `oleh ${n.author}` : "", n.commented_at ? `pada ${n.commented_at}` : ""]
               .filter(Boolean)
               .join(" ");
-            const section = n.location ? `\n   BAGIAN YANG DIREVISI: "${n.location.slice(0, 1500)}"` : "";
-            return `${i + 1}. [${n.type}]${meta ? ` (${meta})` : ""} APA YANG HARUS DIREVISI: ${n.note}${section}`;
+            const section = n.location ? `\n   BAGIAN YANG DIREVISI (TEKS ASLI): "${n.location.slice(0, 1500)}"` : "";
+            const recommendation = n.ai_recommendation ? `\n   REKOMENDASI AI / ACTION PLAN: ${n.ai_recommendation}` : "";
+            const presetResult = n.ai_result ? `\n   HASIL SCRIPT / KALIMAT PENGGANTI AI: ${n.ai_result}` : "";
+            return `${i + 1}. [${n.type}]${meta ? ` (${meta})` : ""} APA YANG HARUS DIREVISI: ${n.note}${section}${recommendation}${presetResult}`;
           })
-          .join("\n")
+          .join("\n\n")
       : "(tidak ada catatan revisi terstruktur)";
-
 
     let userText = "";
     if (kbContext) userText += `=== KNOWLEDGE BASE (persona & style guide) ===\n${kbContext}\n\n`;
     userText += `=== ARTIKEL ASLI ===\n${data.content.slice(0, 120000)}\n\n`;
-    userText += `=== CATATAN REVISI ===\n${notesText}\n\n`;
+    userText += `=== CATATAN REVISI & INSTRUKSI ITEMISASI ===\n${notesText}\n\n`;
     if (data.manual_prompt)
       userText += `=== PERINTAH MANUAL DARI USER (prioritas tertinggi) ===\n${data.manual_prompt}\n\n`;
+    
     userText +=
       data.scope === "partial"
-        ? "Ubah HANYA bagian yang disebut catatan revisi / perintah manual. Bagian lain pertahankan persis.\n"
-        : "Rework menyeluruh, tetap pertahankan fakta, data, dan struktur inti artikel.\n";
+        ? "Ubah HANYA bagian yang disebut catatan revisi / perintah manual. Integrasikan hasil kalimat pengganti atau hasil riset dengan mulus agar nyambung, runtut, dan easy to digest dengan bagian artikel lainnya.\n"
+        : "Rework menyeluruh berdasarkan seluruh catatan revisi di atas, pastikan melakukan riset/verifikasi fakta (nama, jabatan, tempat, atau sumber) jika diinstruksikan dalam catatan, dan jaga agar alur baca tetap runtut, padu, serta easy to digest.\n";
+    
     userText += `\n${ARS_TONE_RULES}\n\nHasilkan artikel versi terbaru, daftar poin perubahan, dan crosscheck tiap catatan revisi.`;
 
     const json = await callAi(apiKey, {
-      model: "google/gemini-3-flash-preview",
+      model: "google/gemini-2.5-flash",
       messages: [
         {
           role: "system",
           content:
-            "Kamu editor senior artikel SEO berbahasa Indonesia. Tugasmu merework artikel sesuai catatan revisi dan perintah manual, lalu melakukan crosscheck jujur apakah setiap catatan sudah dipenuhi. Jangan menghapus data faktual tanpa alasan. Output harus markdown rapi (H1/H2/H3, paragraf pendek).",
+            "Kamu adalah editor senior artikel SEO dan factual researcher berbahasa Indonesia. Tugasmu merework artikel dengan mengimplementasikan instruksi editor, action plan, serta kalimat pengganti yang telah disiapkan. Lakukan pencarian/riset data faktual (nama, jabatan, tempat, sumber) jika diperlukan dalam instruksi. Pastikan keseluruhan artikel menjadi satu kesatuan yang runtut, nyambung, dan easy to digest. Output harus markdown rapi (H1/H2/H3, paragraf pendek).",
         },
         { role: "user", content: userText },
       ],
