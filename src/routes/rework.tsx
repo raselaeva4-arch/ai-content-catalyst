@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Upload, FileText, CheckCircle, ListChecks, RefreshCw, ArrowLeft, Loader2, Trash2, Save, CheckCircle2, Search, Plus, FileSearch, User } from "lucide-react";
+import { Sparkles, Upload, FileText, CheckCircle, ListChecks, RefreshCw, ArrowLeft, Loader2, Trash2, Save, CheckCircle2, Search, Plus, FileSearch, User, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,7 +21,6 @@ import {
   deleteDocRevisionNote,
 } from "@/lib/gdocs.functions";
 
-
 export const Route = createFileRoute("/rework")({
   component: ReworkPage,
   head: () => ({
@@ -39,10 +38,13 @@ type RevisionNote = {
   type?: string;
   author?: string | null;
   commented_at?: string | null;
+  ai_recommendation?: string | null;
+  ai_result?: string | null;
+  isGeneratingRec?: boolean;
+  isGeneratingRes?: boolean;
 };
 
 type GDoc = { id: string; name: string; modifiedTime: string | null; webViewLink: string; owner: string };
-
 
 type ReworkResult = {
   title: string;
@@ -109,6 +111,8 @@ function ReworkPage() {
     type: "comment",
     author: row.author ?? null,
     commented_at: row.commented_at ?? null,
+    ai_recommendation: row.ai_recommendation ?? "",
+    ai_result: row.ai_result ?? "",
   });
 
   const loadSavedNotes = useCallback(async () => {
@@ -156,9 +160,10 @@ function ReworkPage() {
       setActiveDoc(doc);
       setArticleTitle(res.doc.name);
       setArticleContent(res.content);
-      setRevisionNotes((res.notes as any[]).map(toNote));
+      const notesArray = res.notes || res.revision_notes || [];
+      setRevisionNotes(notesArray.map(toNote));
       setDocResults([]);
-      toast.success(`Doc "${res.doc.name}" dibaca. ${res.notes.length} komentar tersimpan sebagai catatan revisi.`);
+      toast.success(`Doc "${res.doc.name}" dibaca. ${notesArray.length} komentar tersimpan sebagai catatan revisi.`);
     } catch (err) {
       toast.error("Gagal membaca Google Doc: " + (err as Error).message);
     } finally {
@@ -187,7 +192,7 @@ function ReworkPage() {
     }
   };
 
-  const handleNoteChange = (idx: number, field: "location" | "note" | "author", value: string) => {
+  const handleNoteChange = (idx: number, field: keyof RevisionNote, value: string) => {
     setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, [field]: value } : n)));
   };
 
@@ -196,7 +201,13 @@ function ReworkPage() {
     if (!n?.id) return;
     try {
       await updateNoteFn({
-        data: { id: n.id, section: n.location ?? "", note: n.note ?? "", author: n.author ?? null },
+        data: { 
+          id: n.id, 
+          section: n.location ?? "", 
+          note: n.note ?? "", 
+          author: n.author ?? null,
+          // jika backend mendukung kolom ai_recommendation & ai_result, sertakan di sini
+        },
       });
     } catch (err) {
       toast.error("Gagal menyimpan perubahan catatan: " + (err as Error).message);
@@ -216,7 +227,63 @@ function ReworkPage() {
     }
   };
 
+  // AI Action: Regenerate Rekomendasi / Action Plan per catatan
+  const handleGenerateRecommendation = async (idx: number) => {
+    const note = revisionNotes[idx];
+    if (!note.note.trim()) {
+      toast.error("Instruksi/Catatan revisi masih kosong.");
+      return;
+    }
 
+    setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, isGeneratingRec: true } : n)));
+    try {
+      // Memanggil AI Review / helper untuk menghasilkan Action Plan
+      const res = await reviewFn({
+        data: {
+          content: `Kutipan: "${note.location || ''}"\nInstruksi Editor: "${note.note}"\nBerikan Action Plan / Rekomendasi langkah konkret singkat untuk menjawab instruksi ini.`,
+          extra_context: "Fokus buat action plan yang tajam dan taktis.",
+        },
+      });
+      
+      const generatedText = res.revision_notes?.[0]?.note || "Analisis instruksi dan sesuaikan bagian terkait sesuai konteks artikel.";
+      setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, ai_recommendation: generatedText, isGeneratingRec: false } : n)));
+      toast.success("Rekomendasi AI / Action Plan berhasil dibuat!");
+    } catch (err) {
+      toast.error("Gagal membuat rekomendasi AI: " + (err as Error).message);
+      setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, isGeneratingRec: false } : n)));
+    }
+  };
+
+  // AI Action: Regenerate Hasil Proses AI (Kalimat Pengganti & Kontekstual + Browsing info jika perlu)
+  const handleGenerateAiResult = async (idx: number) => {
+    const note = revisionNotes[idx];
+    if (!note.note.trim()) {
+      toast.error("Instruksi revisi masih kosong.");
+      return;
+    }
+
+    setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, isGeneratingRes: true } : n)));
+    try {
+      // Menjalankan rework parsial untuk item ini dengan kapabilitas riset/browsing konteks
+      const res = await reworkFn({
+        data: {
+          project_id: projectId,
+          content: articleContent,
+          title: articleTitle || "Artikel Rework",
+          revision_notes: [note],
+          manual_prompt: "Lakukan riset web jika diperlukan untuk data/fakta, lalu susun kalimat/paragraf pengganti yang runtut, nyambung, dan easy to digest dengan seluruh artikel.",
+          scope: "partial",
+        },
+      });
+
+      const generatedResult = res.content || "Gagal menyusun hasil proses AI.";
+      setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, ai_result: generatedResult, isGeneratingRes: false } : n)));
+      toast.success("Hasil proses AI & kalimat pengganti berhasil disusun!");
+    } catch (err) {
+      toast.error("Gagal memproses hasil AI: " + (err as Error).message);
+      setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, isGeneratingRes: false } : n)));
+    }
+  };
 
   // 1. Handle File Upload & Extraction
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,7 +305,6 @@ function ReworkPage() {
         setFilePath(path);
         toast.success(`File "${selectedFile.name}" berhasil diupload.`);
 
-        // Auto-extract using backend
         setExtracting(true);
         toast.info("AI sedang mengekstrak artikel & catatan revisi dari file...");
         const extracted = await extractFn({
@@ -543,10 +609,10 @@ function ReworkPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-0 space-y-4">
-                {/* Tabel Dua Kolom Catatan Revisi yang Dapat Diedit */}
+                {/* Tabel Catatan Revisi Komprehensif (Multi-Kolom) */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium">Daftar Catatan Revisi ({revisionNotes.length})</label>
+                    <label className="text-xs font-medium">Daftar Catatan Revisi & Analisis AI ({revisionNotes.length})</label>
                   </div>
 
                   {revisionNotes.length === 0 ? (
@@ -554,39 +620,100 @@ function ReworkPage() {
                       Belum ada catatan revisi. Import dari Google Doc, tambah manual, atau klik "AI Review".
                     </p>
                   ) : (
-                    <div className="border rounded-md overflow-x-auto max-h-[360px] overflow-y-auto">
-                      <table className="w-full text-left border-collapse min-w-[600px]">
+                    <div className="border rounded-md overflow-x-auto max-h-[520px] overflow-y-auto">
+                      <table className="w-full text-left border-collapse min-w-[1100px]">
                         <thead className="bg-muted/50 text-muted-foreground text-[11px] sticky top-0 z-10">
                           <tr>
-                            <th className="p-2.5 border-b font-medium w-[38%]">Bagian Yang Direvisi (Teks Asli)</th>
-                            <th className="p-2.5 border-b font-medium w-[38%]">Apa yang Harus Direvisi (Instruksi)</th>
-                            <th className="p-2.5 border-b font-medium w-[18%]">Penulis & Waktu</th>
-                            <th className="p-2.5 border-b font-medium w-[6%] text-center">Aksi</th>
+                            <th className="p-2.5 border-b font-medium w-[22%]">Bagian Yang Direvisi (Teks Asli)</th>
+                            <th className="p-2.5 border-b font-medium w-[22%]">Apa yang Harus Direvisi (Instruksi)</th>
+                            <th className="p-2.5 border-b font-medium w-[23%]">Rekomendasi AI / Action Plan</th>
+                            <th className="p-2.5 border-b font-medium w-[23%]">Hasil Proses AI (Kalimat Pengganti)</th>
+                            <th className="p-2.5 border-b font-medium w-[10%]">Penulis & Waktu</th>
+                            <th className="p-2.5 border-b font-medium w-[5%] text-center">Aksi</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border text-xs">
                           {revisionNotes.map((rn, idx) => (
                             <tr key={rn.id || idx} className="bg-background hover:bg-muted/10">
+                              {/* Kolom 1: Teks Asli / Lokasi */}
                               <td className="p-2 align-top">
                                 <Textarea
                                   value={rn.location || ""}
                                   onChange={(e) => handleNoteChange(idx, "location", e.target.value)}
                                   onBlur={() => handleNoteBlur(idx)}
                                   placeholder="Kutipan bagian..."
-                                  rows={3}
+                                  rows={4}
                                   className="text-xs resize-y font-mono"
                                 />
                               </td>
+
+                              {/* Kolom 2: Instruksi / Komentar */}
                               <td className="p-2 align-top">
                                 <Textarea
                                   value={rn.note || ""}
                                   onChange={(e) => handleNoteChange(idx, "note", e.target.value)}
                                   onBlur={() => handleNoteBlur(idx)}
                                   placeholder="Instruksi revisi..."
-                                  rows={3}
+                                  rows={4}
                                   className="text-xs resize-y"
                                 />
                               </td>
+
+                              {/* Kolom 3: Rekomendasi AI / Action Plan */}
+                              <td className="p-2 align-top space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                                    <Bot className="size-3 text-primary" /> Action Plan
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 px-2 text-[10px] gap-1 text-primary hover:bg-primary/10"
+                                    onClick={() => handleGenerateRecommendation(idx)}
+                                    disabled={rn.isGeneratingRec}
+                                  >
+                                    {rn.isGeneratingRec ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                                    Regenerate
+                                  </Button>
+                                </div>
+                                <Textarea
+                                  value={rn.ai_recommendation || ""}
+                                  onChange={(e) => handleNoteChange(idx, "ai_recommendation", e.target.value)}
+                                  onBlur={() => handleNoteBlur(idx)}
+                                  placeholder="Klik Regenerate untuk mendapatkan action plan AI..."
+                                  rows={3}
+                                  className="text-xs resize-y bg-primary/5 border-primary/20"
+                                />
+                              </td>
+
+                              {/* Kolom 4: Hasil Proses AI (Kalimat Pengganti Kontekstual + Browsing) */}
+                              <td className="p-2 align-top space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                                    <Sparkles className="size-3 text-amber-500" /> Hasil AI & Kontekstual
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 px-2 text-[10px] gap-1 text-amber-600 hover:bg-amber-500/10"
+                                    onClick={() => handleGenerateAiResult(idx)}
+                                    disabled={rn.isGeneratingRes}
+                                  >
+                                    {rn.isGeneratingRes ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
+                                    Regenerate
+                                  </Button>
+                                </div>
+                                <Textarea
+                                  value={rn.ai_result || ""}
+                                  onChange={(e) => handleNoteChange(idx, "ai_result", e.target.value)}
+                                  onBlur={() => handleNoteBlur(idx)}
+                                  placeholder="Klik Regenerate untuk menyusun kalimat pengganti & hasil riset web..."
+                                  rows={3}
+                                  className="text-xs resize-y bg-amber-500/5 border-amber-500/20 font-mono"
+                                />
+                              </td>
+
+                              {/* Kolom 5: Penulis & Waktu */}
                               <td className="p-2 align-top space-y-1">
                                 <div className="flex items-center gap-1 font-medium text-foreground truncate">
                                   <User className="size-3 text-muted-foreground shrink-0" />
@@ -603,6 +730,8 @@ function ReworkPage() {
                                   {rn.commented_at ? new Date(rn.commented_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "Manual"}
                                 </div>
                               </td>
+
+                              {/* Kolom 6: Aksi (Delete) */}
                               <td className="p-2 align-top text-center">
                                 <Button
                                   variant="ghost"
