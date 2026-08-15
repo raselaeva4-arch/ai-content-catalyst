@@ -186,6 +186,62 @@ export type Database = {
         }
         Relationships: []
       }
+      doc_revision_notes: {
+        Row: {
+          author: string | null
+          commented_at: string | null
+          created_at: string
+          doc_id: string | null
+          doc_name: string | null
+          doc_url: string | null
+          id: string
+          note: string
+          position: number
+          project_id: string
+          resolved: boolean
+          section: string
+          updated_at: string
+        }
+        Insert: {
+          author?: string | null
+          commented_at?: string | null
+          created_at?: string
+          doc_id?: string | null
+          doc_name?: string | null
+          doc_url?: string | null
+          id?: string
+          note?: string
+          position?: number
+          project_id: string
+          resolved?: boolean
+          section?: string
+          updated_at?: string
+        }
+        Update: {
+          author?: string | null
+          commented_at?: string | null
+          created_at?: string
+          doc_id?: string | null
+          doc_name?: string | null
+          doc_url?: string | null
+          id?: string
+          note?: string
+          position?: number
+          project_id?: string
+          resolved?: boolean
+          section?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doc_revision_notes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base: {
         Row: {
           content: string
