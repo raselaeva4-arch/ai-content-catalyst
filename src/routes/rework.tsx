@@ -181,6 +181,7 @@ function ReworkPage() {
         },
       });
       setRevisionNotes((prev) => [...prev, toNote(res.item)]);
+      toast.success("Catatan revisi baru ditambahkan.");
     } catch (err) {
       toast.error("Gagal menambah catatan: " + (err as Error).message);
     }
@@ -208,6 +209,7 @@ function ReworkPage() {
     if (n?.id) {
       try {
         await deleteNoteFn({ data: { id: n.id } });
+        toast.success("Catatan revisi dihapus.");
       } catch (err) {
         toast.error("Gagal menghapus catatan: " + (err as Error).message);
       }
@@ -326,9 +328,9 @@ function ReworkPage() {
         data: {
           project_id: projectId,
           title: articleTitle || "Artikel Rework",
-          source_type: file ? "file" : "paste",
+          source_type: file ? "file" : activeDoc ? "gdoc" : "paste",
           source_path: filePath,
-          source_name: fileName,
+          source_name: fileName || activeDoc?.name,
           source_mime: fileMime,
           original_content: articleContent,
           revision_notes: revisionNotes,
@@ -381,7 +383,7 @@ function ReworkPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* KOLOM KIRI: INPUT & CONFIG */}
           <div className="space-y-6">
-            {/* Upload File / Ekstraksi */}
+            {/* 1. Sumber Konten & Dokumen */}
             <Card className="p-6">
               <CardHeader className="px-0 pt-0">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -389,38 +391,101 @@ function ReworkPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-0 space-y-4">
-                {!file ? (
-                  <label className="block border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-accent/30 transition-colors">
-                    <Upload className="size-6 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm font-medium">
-                      {uploading ? "Mengupload..." : extracting ? "Mengekstrak dengan AI..." : "Klik untuk upload file (PDF, Image, Text)"}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">Maksimal 20MB</p>
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      onChange={handleFileChange}
-                      accept=".pdf,.txt,image/*" 
-                      disabled={uploading || extracting}
-                    />
+                {/* Google Docs Search & Import */}
+                <div className="space-y-3 pb-4 border-b">
+                  <label className="text-xs font-medium flex items-center gap-1.5">
+                    <FileSearch className="size-3.5 text-primary" /> Import dari Google Docs
                   </label>
-                ) : (
-                  <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/40 text-sm">
-                    <div className="flex items-center gap-2 truncate">
-                      <FileText className="size-4 text-primary shrink-0" />
-                      <span className="truncate font-medium">{file.name}</span>
-                      {extracting && <Badge variant="secondary" className="gap-1"><Loader2 className="size-3 animate-spin" /> Ekstraksi...</Badge>}
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="size-8 text-destructive"
-                      onClick={() => { setFile(null); setFilePath(null); setArticleContent(""); setRevisionNotes([]); }}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Cari nama Google Doc..."
+                      value={docQuery}
+                      onChange={(e) => setDocQuery(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm border rounded-md bg-background"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSearchDocs();
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleSearchDocs}
+                      disabled={docSearching}
                     >
-                      <Trash2 className="size-4" />
+                      {docSearching ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
+                      Cari
                     </Button>
                   </div>
-                )}
+
+                  {docResults.length > 0 && (
+                    <div className="border rounded-md divide-y max-h-40 overflow-y-auto bg-muted/20">
+                      {docResults.map((doc) => (
+                        <div key={doc.id} className="p-2.5 flex items-center justify-between text-xs hover:bg-muted/40">
+                          <div className="truncate pr-2">
+                            <a href={doc.webViewLink} target="_blank" rel="noreferrer" className="font-medium text-primary hover:underline block truncate">
+                              {doc.name}
+                            </a>
+                            <span className="text-[10px] text-muted-foreground">Pemilik: {doc.owner || "Tidak diketahui"}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleImportDoc(doc)}
+                            disabled={docImporting === doc.id}
+                          >
+                            {docImporting === doc.id ? <Loader2 className="size-3 animate-spin mr-1" /> : <Upload className="size-3 mr-1" />}
+                            Import
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {activeDoc && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-1 bg-muted/30 p-2 rounded">
+                      <CheckCircle2 className="size-3.5 text-green-600 shrink-0" />
+                      <span className="truncate">Dokumen aktif: <strong className="text-foreground">{activeDoc.name}</strong></span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload File Lokal */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Atau Upload File Lokal (PDF, Text, Gambar)</label>
+                  {!file ? (
+                    <label className="block border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-accent/30 transition-colors">
+                      <Upload className="size-6 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm font-medium">
+                        {uploading ? "Mengupload..." : extracting ? "Mengekstrak dengan AI..." : "Klik untuk upload file"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Maksimal 20MB</p>
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        onChange={handleFileChange}
+                        accept=".pdf,.txt,image/*" 
+                        disabled={uploading || extracting}
+                      />
+                    </label>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/40 text-sm">
+                      <div className="flex items-center gap-2 truncate">
+                        <FileText className="size-4 text-primary shrink-0" />
+                        <span className="truncate font-medium">{file.name}</span>
+                        {extracting && <Badge variant="secondary" className="gap-1"><Loader2 className="size-3 animate-spin" /> Ekstraksi...</Badge>}
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="size-8 text-destructive"
+                        onClick={() => { setFile(null); setFilePath(null); setArticleContent(""); setRevisionNotes([]); }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
 
                 {/* Judul & Konten Artikel */}
                 <div className="space-y-3">
@@ -448,49 +513,117 @@ function ReworkPage() {
               </CardContent>
             </Card>
 
-            {/* Catatan Revisi & Prompt Manual */}
+            {/* 2. Catatan Revisi & Prompt */}
             <Card className="p-6">
               <CardHeader className="px-0 pt-0">
                 <CardTitle className="text-base flex items-center justify-between">
                   <span className="flex items-center gap-2">
-                    <ListChecks className="size-4 text-primary" /> 2. Catatan Revisi & Prompt
+                    <ListChecks className="size-4 text-primary" /> 2. Catatan Revisi & Instruksi AI
                   </span>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={handleAiReviewNotes}
-                    disabled={reviewingNotes || !articleContent.trim()}
-                  >
-                    {reviewingNotes ? <Loader2 className="size-3.5 animate-spin mr-1.5" /> : <Sparkles className="size-3.5 mr-1.5 text-primary" />}
-                    AI Review Catatan
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleAddNote}
+                      className="gap-1 text-xs"
+                    >
+                      <Plus className="size-3.5" /> Tambah Catatan
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleAiReviewNotes}
+                      disabled={reviewingNotes || !articleContent.trim()}
+                      className="text-xs"
+                    >
+                      {reviewingNotes ? <Loader2 className="size-3.5 animate-spin mr-1.5" /> : <Sparkles className="size-3.5 mr-1.5 text-primary" />}
+                      AI Review
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-0 space-y-4">
-                {/* Daftar Catatan Revisi */}
+                {/* Tabel Dua Kolom Catatan Revisi yang Dapat Diedit */}
                 <div className="space-y-2">
-                  <label className="text-xs font-medium">Ditemukan Catatan Revisi ({revisionNotes.length})</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium">Daftar Catatan Revisi ({revisionNotes.length})</label>
+                  </div>
+
                   {revisionNotes.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic border p-3 rounded-md bg-muted/20">
-                      Belum ada catatan terdeteksi. Upload file atau klik "AI Review Catatan" untuk mendeteksi instruksi editor/koreksi.
+                    <p className="text-xs text-muted-foreground italic border p-4 rounded-md bg-muted/20 text-center">
+                      Belum ada catatan revisi. Import dari Google Doc, tambah manual, atau klik "AI Review".
                     </p>
                   ) : (
-                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                      {revisionNotes.map((rn, idx) => (
-                        <div key={idx} className="p-2.5 border rounded bg-muted/30 text-xs space-y-1">
-                          <div className="flex items-center justify-between">
-                            <Badge variant="outline" className="text-[10px] uppercase">{rn.type || "note"}</Badge>
-                            {rn.location && <span className="text-muted-foreground font-mono">{rn.location}</span>}
-                          </div>
-                          <p>{rn.note}</p>
-                        </div>
-                      ))}
+                    <div className="border rounded-md overflow-x-auto max-h-[360px] overflow-y-auto">
+                      <table className="w-full text-left border-collapse min-w-[600px]">
+                        <thead className="bg-muted/50 text-muted-foreground text-[11px] sticky top-0 z-10">
+                          <tr>
+                            <th className="p-2.5 border-b font-medium w-[38%]">Bagian Yang Direvisi (Teks Asli)</th>
+                            <th className="p-2.5 border-b font-medium w-[38%]">Apa yang Harus Direvisi (Instruksi)</th>
+                            <th className="p-2.5 border-b font-medium w-[18%]">Penulis & Waktu</th>
+                            <th className="p-2.5 border-b font-medium w-[6%] text-center">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border text-xs">
+                          {revisionNotes.map((rn, idx) => (
+                            <tr key={rn.id || idx} className="bg-background hover:bg-muted/10">
+                              <td className="p-2 align-top">
+                                <Textarea
+                                  value={rn.location || ""}
+                                  onChange={(e) => handleNoteChange(idx, "location", e.target.value)}
+                                  onBlur={() => handleNoteBlur(idx)}
+                                  placeholder="Kutipan bagian..."
+                                  rows={3}
+                                  className="text-xs resize-y font-mono"
+                                />
+                              </td>
+                              <td className="p-2 align-top">
+                                <Textarea
+                                  value={rn.note || ""}
+                                  onChange={(e) => handleNoteChange(idx, "note", e.target.value)}
+                                  onBlur={() => handleNoteBlur(idx)}
+                                  placeholder="Instruksi revisi..."
+                                  rows={3}
+                                  className="text-xs resize-y"
+                                />
+                              </td>
+                              <td className="p-2 align-top space-y-1">
+                                <div className="flex items-center gap-1 font-medium text-foreground truncate">
+                                  <User className="size-3 text-muted-foreground shrink-0" />
+                                  <input
+                                    type="text"
+                                    value={rn.author || ""}
+                                    onChange={(e) => handleNoteChange(idx, "author", e.target.value)}
+                                    onBlur={() => handleNoteBlur(idx)}
+                                    placeholder="Author"
+                                    className="w-full bg-transparent border-b border-transparent hover:border-border focus:border-primary text-xs px-1 py-0.5"
+                                  />
+                                </div>
+                                <div className="text-[10px] text-muted-foreground pl-4">
+                                  {rn.commented_at ? new Date(rn.commented_at).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "Manual"}
+                                </div>
+                              </td>
+                              <td className="p-2 align-top text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-7 text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDeleteNote(idx)}
+                                  title="Hapus Catatan"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
 
                 {/* Prompt Manual & Scope */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t">
                   <div className="space-y-1.5 col-span-2">
                     <label className="text-xs font-medium">Perintah / Prompt Tambahan (Prioritas Tertinggi)</label>
                     <Textarea 
