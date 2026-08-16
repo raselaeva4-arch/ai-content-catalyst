@@ -165,6 +165,33 @@ function ReworkPage() {
     }
   };
 
+  const handleImportUrl = async () => {
+    if (!docUrl.trim()) {
+      toast.error("Tempel link Google Docs terlebih dahulu.");
+      return;
+    }
+    setDocImporting("url");
+    try {
+      const res = await importDocFn({ data: { project_id: projectId, doc_id: docUrl.trim() } });
+      setActiveDoc({
+        id: res.doc.id,
+        name: res.doc.name,
+        webViewLink: res.doc.webViewLink,
+        modifiedTime: null,
+        owner: "",
+      });
+      setArticleTitle(res.doc.name);
+      setArticleContent(res.content);
+      setRevisionNotes((res.notes ?? []).map(toNote));
+      setDocResults([]);
+      toast.success(`Doc "${res.doc.name}" dibaca — ${(res.notes ?? []).length} komentar diimpor.`);
+    } catch (err) {
+      toast.error("Gagal membaca Google Doc: " + (err as Error).message);
+    } finally {
+      setDocImporting(null);
+    }
+  };
+
   const handleAddNote = async () => {
     try {
       const res = await createNoteFn({
