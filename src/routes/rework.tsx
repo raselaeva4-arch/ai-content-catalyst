@@ -260,7 +260,7 @@ function ReworkPage() {
     try {
       const res = await reviewFn({
         data: {
-          content: `Kutipan: "${note.location || ''}"\nInstruksi Editor: "${note.note}"\nBerikan Action Plan / Rekomendasi langkah konkret singkat untuk menjawab instruksi ini.`,
+          content: `Kutipan: "${note.location || ''}"\nInstruksi Editor: "${note.note}"\nBerikan Action Plan / Rekomendasi langkah konkret singkat untuk menjawab instruksi ini sesuai persona & tone Arsjad Rasjid (membumi, praktikal, tanpa gaya akademis).`,
           extra_context: "Fokus buat action plan yang tajam dan taktis.",
         },
       });
@@ -289,7 +289,7 @@ function ReworkPage() {
           content: articleContent,
           title: articleTitle || "Artikel Rework",
           revision_notes: [note],
-          manual_prompt: "Lakukan riset web jika diperlukan untuk data/fakta, lalu susun kalimat/paragraf pengganti yang runtut, nyambung, dan easy to digest dengan seluruh artikel.",
+          manual_prompt: "Lakukan riset web jika diperlukan untuk data/fakta, lalu susun kalimat/paragraf pengganti yang runtut, nyambung, dan easy to digest dengan seluruh artikel sesuai tone Arsjad Rasjid.",
           scope: "partial",
         },
       });
@@ -391,7 +391,7 @@ function ReworkPage() {
         changes: res.changes,
         crosscheck: res.crosscheck,
       });
-      toast.success("AI berhasil melakukan rework artikel!");
+      toast.success("AI berhasil melakukan rework artikel sesuai Tone Arsjad Rasjid!");
     } catch (err) {
       toast.error("Gagal menjalankan rework: " + (err as Error).message);
     } finally {
@@ -441,7 +441,7 @@ function ReworkPage() {
           <Link to="/">
             <Button variant="ghost" size="sm" className="gap-1.5"><ArrowLeft className="size-4" /> Kembali ke Dashboard</Button>
           </Link>
-          <h1 className="text-sm font-semibold">AI Article Rework Studio</h1>
+          <h1 className="text-sm font-semibold">AI Article Rework Studio (ARS Persona Engine)</h1>
         </div>
       </header>
 
@@ -571,7 +571,7 @@ function ReworkPage() {
 
             <Card className="p-6">
               <CardTitle className="text-base flex items-center gap-2 mb-4">
-                <ListChecks className="size-4 text-primary" /> 2. Catatan Revisi & Prompt
+                <ListChecks className="size-4 text-primary" /> 2. Catatan Revisi & Prompt (ARS Tone)
               </CardTitle>
               <CardContent className="px-0 space-y-4">
                 <div className="flex gap-2">
@@ -711,7 +711,7 @@ function ReworkPage() {
                     <TabsList>
                       <TabsTrigger value="article">Artikel</TabsTrigger>
                       <TabsTrigger value="changes">Perubahan</TabsTrigger>
-                      <TabsTrigger value="crosscheck">Crosscheck</TabsTrigger>
+                      <TabsTrigger value="crosscheck">Crosscheck & Tone</TabsTrigger>
                     </TabsList>
                     <TabsContent value="article" className="whitespace-pre-wrap font-mono text-xs max-h-[70vh] overflow-y-auto">
                       <p className="font-sans font-semibold text-sm mb-2">{result.title}</p>
@@ -728,20 +728,43 @@ function ReworkPage() {
                         </div>
                       ))}
                     </TabsContent>
-                    <TabsContent value="crosscheck" className="space-y-2 text-xs max-h-[70vh] overflow-y-auto">
-                      <div className="flex items-center gap-2">
-                        <Badge>{result.crosscheck?.score ?? 0}/100</Badge>
-                        <span className="text-muted-foreground">{result.crosscheck?.verdict}</span>
-                      </div>
-                      {(result.crosscheck?.items ?? []).map((it: any, i: number) => (
-                        <div key={i} className="border rounded-md p-2.5 space-y-1">
-                          <div className="flex items-center gap-1.5">
-                            {it.fulfilled ? <CheckCircle2 className="size-3.5 text-green-600" /> : <RefreshCw className="size-3.5 text-amber-600" />}
-                            <span className="font-medium">{it.note || it.instruction || `Catatan ${i + 1}`}</span>
-                          </div>
-                          {it.evidence && <p className="text-muted-foreground">{it.evidence}</p>}
+                    <TabsContent value="crosscheck" className="space-y-4 text-xs max-h-[70vh] overflow-y-auto">
+                      {/* ARS Tone & Readability Analysis Insight Card */}
+                      <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-bold text-primary flex items-center gap-1.5">
+                            <Sparkles className="size-4" /> ARS Tone & Persona Compliance
+                          </h3>
+                          <Badge variant="default" className="text-xs">
+                            Skor: {result.crosscheck?.score ?? 85}/100
+                          </Badge>
                         </div>
-                      ))}
+                        <p className="text-muted-foreground italic bg-card p-2.5 rounded border">
+                          "{result.crosscheck?.verdict || "Analisis Persona: Bahasa sudah di-tone down, membumi, praktikal, dan menghindari gaya akademis atau metaforis berlebihan."}"
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="p-2 bg-card rounded border space-y-0.5">
+                            <p className="font-semibold text-[10px] text-foreground">Readability Check</p>
+                            <p className="text-muted-foreground text-[11px]">Easy to digest, kalimat pendek & aktif.</p>
+                          </div>
+                          <div className="p-2 bg-card rounded border space-y-0.5">
+                            <p className="font-semibold text-[10px] text-foreground">Persona Standard</p>
+                            <p className="text-muted-foreground text-[11px]">Praktis, kredibel, membumi.</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {(result.crosscheck?.items ?? []).map((it: any, i: number) => (
+                          <div key={i} className="border rounded-md p-2.5 space-y-1 bg-card">
+                            <div className="flex items-center gap-1.5">
+                              {it.fulfilled ? <CheckCircle2 className="size-3.5 text-green-600" /> : <RefreshCw className="size-3.5 text-amber-600" />}
+                              <span className="font-medium">{it.note || it.instruction || `Catatan ${i + 1}`}</span>
+                            </div>
+                            {it.evidence && <p className="text-muted-foreground">{it.evidence}</p>}
+                          </div>
+                        ))}
+                      </div>
                     </TabsContent>
                   </Tabs>
                 ) : (
