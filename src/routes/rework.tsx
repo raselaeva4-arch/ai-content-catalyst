@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Toaster, toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/use-active-project";
-import { extractArticleFile, reviewRevisionNotes, runRework, saveRework } from "@/lib/rework.functions";
+import { extractArticleFile, reviewRevisionNotes, runRework, saveRework, generateReplacementSentence } from "@/lib/rework.functions";
 import {
   searchGoogleDocs,
   importGoogleDoc,
@@ -65,6 +65,7 @@ function ReworkPage() {
   const reviewFn = useServerFn(reviewRevisionNotes);
   const reworkFn = useServerFn(runRework);
   const saveFn = useServerFn(saveRework);
+  const generateSentenceFn = useServerFn(generateReplacementSentence);
 
   const [file, setFile] = useState<File | null>(null);
   const [filePath, setFilePath] = useState<string | null>(null);
@@ -304,20 +305,17 @@ function ReworkPage() {
 
     setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, isGeneratingRes: true } : n)));
     try {
-      const res = await reworkFn({
+      const res = await generateSentenceFn({
         data: {
-          project_id: projectId,
-          content: articleContent,
-          title: articleTitle || "Artikel Rework",
-          revision_notes: [note],
-          manual_prompt: "Susun kalimat pengganti yang runtut, membumi, dan easy to digest sesuai tone Arsjad Rasjid.",
-          scope: "partial",
+          article_content: articleContent,
+          location: note.location || "",
+          note: note.note,
         },
       });
 
-      const generatedResult = res.content || "Gagal menyusun kalimat pengganti.";
+      const generatedResult = res.replacement || "Kalimat pengganti tidak tersedia.";
       setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, ai_result: generatedResult, isGeneratingRes: false } : n)));
-      toast.success("Kalimat pengganti AI berhasil disusun!");
+      toast.success("Kalimat pengganti singkat berhasil disusun!");
     } catch (err) {
       toast.error("Gagal memproses AI: " + (err as Error).message);
       setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, isGeneratingRes: false } : n)));
