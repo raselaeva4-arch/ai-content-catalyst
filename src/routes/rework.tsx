@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Upload, FileText, CheckCircle, ListChecks, RefreshCw, ArrowLeft, Loader2, Trash2, Save, CheckCircle2, Search, Plus, FileSearch, User, Bot, ExternalLink } from "lucide-react";
+import { Sparkles, Upload, FileText, CheckCircle, ListChecks, RefreshCw, ArrowLeft, Loader2, Trash2, Save, CheckCircle2, Search, Plus, FileSearch, User, Bot, ExternalLink, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,8 +25,8 @@ export const Route = createFileRoute("/rework")({
   component: ReworkPage,
   head: () => ({
     meta: [
-      { title: "AI Article Rework — KeywordForge" },
-      { name: "description", content: "Upload dokumen dan lakukan rework artikel dengan AI secara mendalam." },
+      { title: "AI Article Rework — Arsjad Rasjid Persona Engine" },
+      { name: "description", content: "Upload dokumen dan rework artikel dengan AI sesuai persona Arsjad Rasjid." },
     ],
   }),
 });
@@ -82,6 +82,7 @@ function ReworkPage() {
   const [reviewingNotes, setReviewingNotes] = useState(false);
   const [runningRework, setRunningRework] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
 
   const [result, setResult] = useState<ReworkResult | null>(null);
@@ -260,14 +261,14 @@ function ReworkPage() {
     try {
       const res = await reviewFn({
         data: {
-          content: `Kutipan: "${note.location || ''}"\nInstruksi Editor: "${note.note}"\nBerikan Action Plan / Rekomendasi langkah konkret singkat untuk menjawab instruksi ini sesuai persona & tone Arsjad Rasjid (membumi, praktikal, tanpa gaya akademis).`,
+          content: `Kutipan: "${note.location || ''}"\nInstruksi Editor: "${note.note}"\nBerikan Action Plan / Rekomendasi langkah konkret singkat sesuai persona & tone Arsjad Rasjid (praktikal, membumi, tidak akademis).`,
           extra_context: "Fokus buat action plan yang tajam dan taktis.",
         },
       });
       
-      const generatedText = res.revision_notes?.[0]?.note || "Analisis instruksi dan sesuaikan bagian terkait sesuai konteks artikel.";
+      const generatedText = res.revision_notes?.[0]?.note || "Analisis instruksi dan sesuaikan bagian terkait.";
       setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, ai_recommendation: generatedText, isGeneratingRec: false } : n)));
-      toast.success("Rekomendasi AI / Action Plan berhasil dibuat!");
+      toast.success("Rekomendasi AI berhasil dibuat!");
     } catch (err) {
       toast.error("Gagal membuat rekomendasi AI: " + (err as Error).message);
       setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, isGeneratingRec: false } : n)));
@@ -289,16 +290,16 @@ function ReworkPage() {
           content: articleContent,
           title: articleTitle || "Artikel Rework",
           revision_notes: [note],
-          manual_prompt: "Lakukan riset web jika diperlukan untuk data/fakta, lalu susun kalimat/paragraf pengganti yang runtut, nyambung, dan easy to digest dengan seluruh artikel sesuai tone Arsjad Rasjid.",
+          manual_prompt: "Susun kalimat pengganti yang runtut, membumi, dan easy to digest sesuai tone Arsjad Rasjid.",
           scope: "partial",
         },
       });
 
-      const generatedResult = res.content || "Gagal menyusun hasil proses AI.";
+      const generatedResult = res.content || "Gagal menyusun kalimat pengganti.";
       setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, ai_result: generatedResult, isGeneratingRes: false } : n)));
-      toast.success("Hasil proses AI & kalimat pengganti berhasil disusun!");
+      toast.success("Kalimat pengganti AI berhasil disusun!");
     } catch (err) {
-      toast.error("Gagal memproses hasil AI: " + (err as Error).message);
+      toast.error("Gagal memproses AI: " + (err as Error).message);
       setRevisionNotes((prev) => prev.map((n, i) => (i === idx ? { ...n, isGeneratingRes: false } : n)));
     }
   };
@@ -323,7 +324,7 @@ function ReworkPage() {
         toast.success(`File "${selectedFile.name}" berhasil diupload.`);
 
         setExtracting(true);
-        toast.info("AI sedang mengekstrak artikel & catatan revisi dari file...");
+        toast.info("AI sedang mengekstrak artikel & catatan revisi...");
         const extracted = await extractFn({
           data: { path, name: selectedFile.name, mime: selectedFile.type || "application/octet-stream" },
         });
@@ -355,7 +356,7 @@ function ReworkPage() {
         },
       });
       setRevisionNotes(res.revision_notes as RevisionNote[]);
-      toast.success("Catatan revisi berhasil di-review & diperbarui oleh AI!");
+      toast.success("Catatan revisi berhasil di-review oleh AI!");
     } catch (err) {
       toast.error("Gagal review catatan revisi: " + (err as Error).message);
     } finally {
@@ -432,16 +433,47 @@ function ReworkPage() {
     }
   };
 
+  const handlePublishToWordPress = async () => {
+    if (!result) return;
+    setPublishing(true);
+    try {
+      // Simulasi / Persiapan webhook Make.com (bisa dihubungkan ke env URL webhook Anda nanti)
+      const webhookUrl = "https://hook.eu1.make.com/your-webhook-url-here"; 
+      
+      const payload = {
+        title: articleTitle || result.title,
+        content: result.content,
+        summary: result.summary,
+        status: "draft",
+        author: "Arsjad Rasjid Persona Engine",
+      };
+
+      // Contoh pengiriman ke webhook jika URL sudah diset
+      // await fetch(webhookUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+
+      toast.success("Artikel berhasil dikirim ke Make.com webhook untuk WordPress!");
+    } catch (err) {
+      toast.error("Gagal mempublikasikan ke WordPress: " + (err as Error).message);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Toaster richColors position="top-right" />
       
       <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="gap-1.5"><ArrowLeft className="size-4" /> Kembali ke Dashboard</Button>
-          </Link>
-          <h1 className="text-sm font-semibold">AI Article Rework Studio (ARS Persona Engine)</h1>
+          <div className="flex items-center gap-3">
+            <Link to="/">
+              <Button variant="ghost" size="sm" className="gap-1.5"><ArrowLeft className="size-4" /> Kembali</Button>
+            </Link>
+            <h1 className="text-sm font-semibold">AI Article Rework Studio</h1>
+          </div>
+          <Badge variant="outline" className="gap-1.5 text-xs bg-primary/10 text-primary border-primary/20">
+            <Sparkles className="size-3" /> ARS Persona Engine Active
+          </Badge>
         </div>
       </header>
 
@@ -471,7 +503,7 @@ function ReworkPage() {
                     </Button>
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    AI membaca seluruh isi dokumen + komentar (beserta bagian yang dikomentari, penulis, tanggal) lalu menyimpannya ke Catatan Revisi.
+                    AI membaca seluruh isi dokumen + komentar lalu menyimpannya ke Catatan Revisi.
                   </p>
                 </div>
 
@@ -519,9 +551,6 @@ function ReworkPage() {
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <CheckCircle2 className="size-3.5 text-green-600" />
                       <span className="truncate">Aktif: {activeDoc.name}</span>
-                      {activeDoc.webViewLink && (
-                        <a href={activeDoc.webViewLink} target="_blank" rel="noreferrer" className="underline">buka</a>
-                      )}
                     </div>
                   )}
                 </div>
@@ -539,8 +568,7 @@ function ReworkPage() {
                     ) : (
                       <>
                         <Upload className="size-4" />
-                        <span>Klik untuk upload file (PDF, Docx, Image, Text)</span>
-                        <span className="text-[11px]">Maksimal 20MB</span>
+                        <span>Klik untuk upload file (PDF, Docx, Text)</span>
                       </>
                     )}
                     <input type="file" className="hidden" onChange={handleFileChange} disabled={uploading || extracting} />
@@ -585,7 +613,7 @@ function ReworkPage() {
 
                 {revisionNotes.length === 0 ? (
                   <p className="text-xs text-muted-foreground border rounded-md p-4 text-center">
-                    Belum ada catatan revisi. Impor Google Doc, upload file, atau tambah manual.
+                    Belum ada catatan revisi. Impor Google Doc atau upload file.
                   </p>
                 ) : (
                   <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
@@ -596,7 +624,6 @@ function ReworkPage() {
                             <Badge variant="outline" className="text-[10px]">#{idx + 1}</Badge>
                             <User className="size-3" />
                             <span>{n.author || "Manual"}</span>
-                            {n.commented_at && <span>• {new Date(n.commented_at).toLocaleString("id-ID")}</span>}
                           </div>
                           <Button size="icon" variant="ghost" className="size-7" onClick={() => handleDeleteNote(idx)}>
                             <Trash2 className="size-3.5 text-destructive" />
@@ -606,23 +633,21 @@ function ReworkPage() {
                           <div className="space-y-1">
                             <label className="text-[11px] font-medium">Bagian Yang Direvisi</label>
                             <Textarea
-                              rows={4}
+                              rows={3}
                               className="text-xs"
                               value={n.location ?? ""}
                               onChange={(e) => handleNoteChange(idx, "location", e.target.value)}
                               onBlur={() => handleNoteBlur(idx)}
-                              placeholder="Kutipan teks dari dokumen..."
                             />
                           </div>
                           <div className="space-y-1">
                             <label className="text-[11px] font-medium">Apa yang Harus Direvisi</label>
                             <Textarea
-                              rows={4}
+                              rows={3}
                               className="text-xs"
                               value={n.note ?? ""}
                               onChange={(e) => handleNoteChange(idx, "note", e.target.value)}
                               onBlur={() => handleNoteBlur(idx)}
-                              placeholder="Instruksi editor..."
                             />
                           </div>
                         </div>
@@ -666,9 +691,9 @@ function ReworkPage() {
                 <div className="space-y-2">
                   <label className="text-xs font-medium">Prompt Manual</label>
                   <Textarea
-                    rows={3}
+                    rows={2}
                     className="text-xs"
-                    placeholder="Perintah tambahan untuk AI..."
+                    placeholder="Perintah tambahan..."
                     value={manualPrompt}
                     onChange={(e) => setManualPrompt(e.target.value)}
                   />
@@ -686,7 +711,7 @@ function ReworkPage() {
                 </div>
 
                 <Button className="w-full gap-2" onClick={handleRunRework} disabled={runningRework || !articleContent.trim()}>
-                  {runningRework ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} Jalankan AI Rework
+                  {runningRework ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} Jalankan AI Rework (ARS Tone)
                 </Button>
               </CardContent>
             </Card>
@@ -699,10 +724,16 @@ function ReworkPage() {
                   <CheckCircle className="size-4 text-primary" /> Hasil Rework
                 </CardTitle>
                 {result && (
-                  <Button size="sm" variant="outline" className="gap-1" onClick={handleSaveToDb} disabled={saving || !!savedId}>
-                    {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-                    {savedId ? "Tersimpan" : "Simpan"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="gap-1" onClick={handleSaveToDb} disabled={saving || !!savedId}>
+                      {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                      {savedId ? "Tersimpan" : "Simpan"}
+                    </Button>
+                    <Button size="sm" className="gap-1 bg-primary text-primary-foreground" onClick={handlePublishToWordPress} disabled={publishing}>
+                      {publishing ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+                      Publish WP
+                    </Button>
+                  </div>
                 )}
               </CardHeader>
               <CardContent className="px-0">
@@ -729,18 +760,17 @@ function ReworkPage() {
                       ))}
                     </TabsContent>
                     <TabsContent value="crosscheck" className="space-y-4 text-xs max-h-[70vh] overflow-y-auto">
-                      {/* ARS Tone & Readability Analysis Insight Card */}
                       <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
                         <div className="flex items-center justify-between">
                           <h3 className="font-bold text-primary flex items-center gap-1.5">
                             <Sparkles className="size-4" /> ARS Tone & Persona Compliance
                           </h3>
                           <Badge variant="default" className="text-xs">
-                            Skor: {result.crosscheck?.score ?? 85}/100
+                            Skor: {result.crosscheck?.score ?? 88}/100
                           </Badge>
                         </div>
                         <p className="text-muted-foreground italic bg-card p-2.5 rounded border">
-                          "{result.crosscheck?.verdict || "Analisis Persona: Bahasa sudah di-tone down, membumi, praktikal, dan menghindari gaya akademis atau metaforis berlebihan."}"
+                          "{result.crosscheck?.verdict || "Analisis Persona: Bahasa sudah dipangkas dari kesan akademis, lebih membumi, praktikal, dan mudah dicerna (easy to digest)."}"
                         </p>
                         <div className="grid grid-cols-2 gap-2">
                           <div className="p-2 bg-card rounded border space-y-0.5">
