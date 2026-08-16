@@ -131,6 +131,47 @@ export const reviewRevisionNotes = createServerFn({ method: "POST" })
     };
   });
 
+export const generateReplacementSentence = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      article_content: z.string().max(100000),
+      location: z.string().optional().default(""),
+      note: z.string(),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+
+    const prompt = `
+    === MASTER PLAYBOOK (ARSJAD RASJID) ===
+    ${ARS_MASTER_PLAYBOOK}
+
+    === KUTIPAN TEKS ASLI ===
+    "${data.location}"
+
+    === INSTRUKSI EDITOR ===
+    "${data.note}"
+
+    TUGAS: Buat HANYA 1-2 kalimat pengganti yang singkat, padat, membumi, dan langsung menjawab instruksi editor sesuai tone Arsjad Rasjid. Jangan kembalikan artikel penuh atau penjelasan panjang, berikan HANYA teks kalimat penggantinya saja (maksimal 2 kalimat pendek).
+    `;
+
+    const json = await callAi(apiKey, {
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "system",
+          content: "Kamu adalah copywriter profesional Arsjad Rasjid. Berikan HANYA kalimat pengganti yang singkat dan padat (1-2 kalimat), tanpa pengantar, tanpa basa-basi, dan tanpa penjelasan lain.",
+        },
+        { role: "user", content: prompt },
+      ],
+    });
+
+    const text = json.choices?.[0]?.message?.content?.trim() || "";
+    return { replacement: text };
+  });
+
 export const runRework = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
