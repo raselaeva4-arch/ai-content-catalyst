@@ -188,6 +188,8 @@ export type Database = {
       }
       doc_revision_notes: {
         Row: {
+          ai_recommendation: string | null
+          ai_result: string | null
           author: string | null
           commented_at: string | null
           created_at: string
@@ -203,6 +205,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_recommendation?: string | null
+          ai_result?: string | null
           author?: string | null
           commented_at?: string | null
           created_at?: string
@@ -218,6 +222,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_recommendation?: string | null
+          ai_result?: string | null
           author?: string | null
           commented_at?: string | null
           created_at?: string
