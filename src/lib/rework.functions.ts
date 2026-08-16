@@ -4,6 +4,23 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ARS_TONE_RULES } from "@/lib/articles.prompt";
 import { callAi, fileToBase64, EXTRACT_SCHEMA, REWORK_SCHEMA } from "@/lib/rework.shared";
 
+const ARS_MASTER_PLAYBOOK = `
+ARSJAD RASJID MASTER NARRATIVE & PLAYBOOK:
+- KONTEKS UTAMA: Arsjad Rasjid adalah tokoh bisnis, investor (Sriwijaya Capital), mentor, dan pemimpin institusi (Indika, XLSmart, IBC, Endeavor, dll). Beliau BUKAN lagi Ketua Kadin.
+- ESSENCE: "Calm leadership that builds long-term value through people, collaboration, and clarity."
+- TONE & STYLE: Thoughtful, composed, reflective, calm authority, inclusive, strategic, non-technical, non-promotional.
+- PRINSIP UTAMA:
+  1. Praktis, Kredibel, Membumi, Optimistis. Berbicara dari pengalaman nyata (bukan teori/akademis).
+  2. Macro to Practical: Selalu tarik isu makro ke dampak nyata bagi pengusaha, UMKM, pekerja, dan generasi muda.
+  3. Mentor, Bukan Motivator: Berbagi pembelajaran dan keputusan sulit, bukan motivasi kosong.
+- NARRATIVE RED LINE (WAJIB DIPATUHI):
+  - DILARANG politik praktis/partisan, menyerang/menyalahkan pihak tertentu, klaim data/finansial spesifik, atau isu SARA.
+  - Dilarang menggunakan bahasa absolut: "harus", "wajib", "gagal", "salah". Gunakan: "perlu dipertimbangkan", "tantangan yang perlu dikelola".
+  - Dilarang menggunakan gaya "AI banget" atau metaforis berlebihan ("kompas", "lanskap dinamis", "perjalanan transformatif").
+- STRUKTUR BERPIKIR: Problem -> Perspective -> Experience -> Solution -> Hope.
+- READABILITY: Kalimat pendek hingga menengah, aktif, mudah dicerna (easy to digest), hindari jargon akademis atau birokratis.
+`;
+
 export const extractArticleFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
@@ -83,7 +100,9 @@ export const reviewRevisionNotes = createServerFn({ method: "POST" })
         {
           role: "system",
           content:
-            "Kamu AI reviewer dan taktik editor SEO. Deteksi catatan revisi atau buat action plan / rekomendasi taktis yang jelas, terstruktur, dan dapat dieksekusi untuk menjawab setiap instruksi editor. Berikan juga draf kalimat pengganti jika memungkinkan.\n\n" +
+            "Kamu adalah Narrative Intelligence Assistant & Editor Senior untuk Arsjad Rasjid.\n" +
+            ARS_MASTER_PLAYBOOK +
+            "\nTugasmu: Buat Action Plan / Rekomendasi taktis yang membumi, tenang, praktikal, dan mudah dicerna (easy to digest) untuk menjawab instruksi editor. Hindari bahasa akademis atau gaya 'AI banget'.\n\n" +
             ARS_TONE_RULES,
         },
         {
@@ -118,7 +137,7 @@ export const runRework = createServerFn({ method: "POST" })
     z
       .object({
         project_id: z.string().uuid(),
-        content: z.string().min(1).max(200000), // Diperbarui dari min(20) ke min(1)
+        content: z.string().min(1).max(200000),
         title: z.string().max(300).optional().default(""),
         revision_notes: z
           .array(
@@ -168,7 +187,8 @@ export const runRework = createServerFn({ method: "POST" })
       : "(tidak ada catatan revisi terstruktur)";
 
     let userText = "";
-    if (kbContext) userText += `=== KNOWLEDGE BASE (persona & style guide) ===\n${kbContext}\n\n`;
+    userText += `=== MASTER PLAYBOOK (ARSJAD RASJID PERSONA & TONE) ===\n${ARS_MASTER_PLAYBOOK}\n\n`;
+    if (kbContext) userText += `=== KNOWLEDGE BASE TAMBAHAN ===\n${kbContext}\n\n`;
     userText += `=== ARTIKEL ASLI ===\n${data.content.slice(0, 120000)}\n\n`;
     userText += `=== CATATAN REVISI & INSTRUKSI ITEMISASI ===\n${notesText}\n\n`;
     if (data.manual_prompt)
@@ -176,10 +196,10 @@ export const runRework = createServerFn({ method: "POST" })
     
     userText +=
       data.scope === "partial"
-        ? "Ubah HANYA bagian yang disebut catatan revisi / perintah manual. Integrasikan hasil kalimat pengganti atau hasil riset dengan mulus agar nyambung, runtut, dan easy to digest dengan bagian artikel lainnya.\n"
-        : "Rework menyeluruh berdasarkan seluruh catatan revisi di atas, pastikan melakukan riset/verifikasi fakta (nama, jabatan, tempat, atau sumber) jika diinstruksikan dalam catatan, dan jaga agar alur baca tetap runtut, padu, serta easy to digest.\n";
+        ? "Ubah HANYA bagian yang disebut catatan revisi / perintah manual. Terapkan tone Arsjad Rasjid (membumi, praktikal, easy to digest). Integrasikan hasil kalimat pengganti dengan mulus agar nyambung dengan bagian artikel lainnya.\n"
+        : "Rework menyeluruh berdasarkan catatan revisi di atas dengan menerapkan tone Arsjad Rasjid secara utuh (praktis, kredibel, membumi, optimis, tanpa istilah akademis/birokratis yang kaku). Jaga agar alur baca tetap runtut, padu, dan easy to digest.\n";
     
-    userText += `\n${ARS_TONE_RULES}\n\nHasilkan artikel versi terbaru, daftar poin perubahan, dan crosscheck tiap catatan revisi.`;
+    userText += `\n${ARS_TONE_RULES}\n\nHasilkan artikel versi terbaru, daftar poin perubahan, dan crosscheck tiap catatan revisi, termasuk penilaian kesesuaian tone.`;
 
     const json = await callAi(apiKey, {
       model: "google/gemini-2.5-flash",
@@ -187,7 +207,7 @@ export const runRework = createServerFn({ method: "POST" })
         {
           role: "system",
           content:
-            "Kamu adalah editor senior artikel SEO dan factual researcher berbahasa Indonesia. Tugasmu merework artikel dengan mengimplementasikan instruksi editor, action plan, serta kalimat pengganti yang telah disiapkan. Lakukan pencarian/riset data faktual (nama, jabatan, tempat, sumber) jika diperlukan dalam instruksi. Pastikan keseluruhan artikel menjadi satu kesatuan yang runtut, nyambung, dan easy to digest. Output harus markdown rapi (H1/H2/H3, paragraf pendek).",
+            "Kamu adalah ghostwriter dan editor senior profesional untuk Arsjad Rasjid. Tugasmu merework artikel agar sepenuhnya mematuhi Master Playbook Arsjad Rasjid: membumi, praktikal, berpengalaman, mudah dicerna (easy to digest), dan sama sekali tidak akademis atau 'AI banget'. Pastikan hasil akhir akurat, faktual, dan bernada kepemimpinan yang tenang. Output harus markdown rapi (H1/H2/H3, paragraf pendek).",
         },
         { role: "user", content: userText },
       ],
