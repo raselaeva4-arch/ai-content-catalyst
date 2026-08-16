@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { searchDocs, fetchDocComments, fetchDocContent, fetchDocMeta } from "@/lib/gdocs.shared";
+import { searchDocs, fetchDocComments, fetchDocContent, fetchDocMeta, parseDocId } from "@/lib/gdocs.shared";
 
 export const searchGoogleDocs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
