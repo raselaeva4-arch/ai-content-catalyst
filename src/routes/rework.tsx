@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Upload, FileText, CheckCircle, ListChecks, RefreshCw, ArrowLeft, Loader2, Trash2, Save, CheckCircle2, Search, Plus, FileSearch, User, Bot, ExternalLink, Send } from "lucide-react";
+import { Sparkles, Upload, FileText, CheckCircle, ListChecks, RefreshCw, ArrowLeft, Loader2, Trash2, Save, CheckCircle2, Search, Plus, FileSearch, User, Bot, ExternalLink, Send, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -134,6 +134,26 @@ function ReworkPage() {
   useEffect(() => {
     void loadSavedNotes();
   }, [loadSavedNotes]);
+
+  // Fungsi Reset Data ke Step 0
+  const handleResetAll = () => {
+    setFile(null);
+    setFilePath(null);
+    setFileMime("");
+    setFileName("");
+    setArticleTitle("");
+    setArticleContent("");
+    setRevisionNotes([]);
+    setManualPrompt("");
+    setScope("full");
+    setResult(null);
+    setSavedId(null);
+    setDocUrl("");
+    setDocQuery("");
+    setDocResults([]);
+    setActiveDoc(null);
+    toast.success("Data berhasil direset. Kembali ke Step 0.");
+  };
 
   const handleSearchDocs = async () => {
     setDocSearching(true);
@@ -437,7 +457,6 @@ function ReworkPage() {
     if (!result) return;
     setPublishing(true);
     try {
-      // Simulasi / Persiapan webhook Make.com (bisa dihubungkan ke env URL webhook Anda nanti)
       const webhookUrl = "https://hook.eu1.make.com/your-webhook-url-here"; 
       
       const payload = {
@@ -448,7 +467,6 @@ function ReworkPage() {
         author: "Arsjad Rasjid Persona Engine",
       };
 
-      // Contoh pengiriman ke webhook jika URL sudah diset
       // await fetch(webhookUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
 
       toast.success("Artikel berhasil dikirim ke Make.com webhook untuk WordPress!");
@@ -471,9 +489,14 @@ function ReworkPage() {
             </Link>
             <h1 className="text-sm font-semibold">AI Article Rework Studio</h1>
           </div>
-          <Badge variant="outline" className="gap-1.5 text-xs bg-primary/10 text-primary border-primary/20">
-            <Sparkles className="size-3" /> ARS Persona Engine Active
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs text-destructive hover:text-destructive" onClick={handleResetAll}>
+              <RotateCcw className="size-3.5" /> Reset Data (Step 0)
+            </Button>
+            <Badge variant="outline" className="gap-1.5 text-xs bg-primary/10 text-primary border-primary/20">
+              <Sparkles className="size-3" /> ARS Persona Engine Active
+            </Badge>
+          </div>
         </div>
       </header>
 
