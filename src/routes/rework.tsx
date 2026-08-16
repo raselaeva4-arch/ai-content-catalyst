@@ -153,7 +153,7 @@ function ReworkPage() {
       setActiveDoc(doc);
       setArticleTitle(res.doc.name);
       setArticleContent(res.content);
-      const notesArray = res.notes || res.revision_notes || [];
+      const notesArray = res.notes ?? [];
       setRevisionNotes(notesArray.map(toNote));
       setDocResults([]);
       toast.success(`Doc "${res.doc.name}" dibaca.`);
