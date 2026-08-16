@@ -94,6 +94,7 @@ function ReworkPage() {
   const deleteNoteFn = useServerFn(deleteDocRevisionNote);
 
   const [docQuery, setDocQuery] = useState("");
+  const [docUrl, setDocUrl] = useState("");
   const [docResults, setDocResults] = useState<GDoc[]>([]);
   const [docSearching, setDocSearching] = useState(false);
   const [docImporting, setDocImporting] = useState<string | null>(null);
