@@ -36,6 +36,23 @@ function driveKeyOrThrow() {
   return driveKey;
 }
 
+/** Terima link Google Docs/Drive lengkap atau ID mentah, kembalikan document id. */
+export function parseDocId(input: string): string {
+  const raw = (input ?? "").trim();
+  if (!raw) throw new Error("Link atau ID Google Doc kosong.");
+  const patterns = [
+    /\/document\/d\/([a-zA-Z0-9_-]{10,})/,
+    /\/file\/d\/([a-zA-Z0-9_-]{10,})/,
+    /[?&]id=([a-zA-Z0-9_-]{10,})/,
+  ];
+  for (const p of patterns) {
+    const m = raw.match(p);
+    if (m) return m[1];
+  }
+  if (/^[a-zA-Z0-9_-]{10,}$/.test(raw)) return raw;
+  throw new Error("Link Google Doc tidak valid. Contoh: https://docs.google.com/document/d/<ID>/edit");
+}
+
 export async function searchDocs(q: string) {
   const key = driveKeyOrThrow();
   const escaped = q.replace(/'/g, "\\'");

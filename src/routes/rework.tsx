@@ -94,6 +94,7 @@ function ReworkPage() {
   const deleteNoteFn = useServerFn(deleteDocRevisionNote);
 
   const [docQuery, setDocQuery] = useState("");
+  const [docUrl, setDocUrl] = useState("");
   const [docResults, setDocResults] = useState<GDoc[]>([]);
   const [docSearching, setDocSearching] = useState(false);
   const [docImporting, setDocImporting] = useState<string | null>(null);
@@ -153,10 +154,37 @@ function ReworkPage() {
       setActiveDoc(doc);
       setArticleTitle(res.doc.name);
       setArticleContent(res.content);
-      const notesArray = res.notes || res.revision_notes || [];
+      const notesArray = res.notes ?? [];
       setRevisionNotes(notesArray.map(toNote));
       setDocResults([]);
       toast.success(`Doc "${res.doc.name}" dibaca.`);
+    } catch (err) {
+      toast.error("Gagal membaca Google Doc: " + (err as Error).message);
+    } finally {
+      setDocImporting(null);
+    }
+  };
+
+  const handleImportUrl = async () => {
+    if (!docUrl.trim()) {
+      toast.error("Tempel link Google Docs terlebih dahulu.");
+      return;
+    }
+    setDocImporting("url");
+    try {
+      const res = await importDocFn({ data: { project_id: projectId, doc_id: docUrl.trim() } });
+      setActiveDoc({
+        id: res.doc.id,
+        name: res.doc.name,
+        webViewLink: res.doc.webViewLink,
+        modifiedTime: null,
+        owner: "",
+      });
+      setArticleTitle(res.doc.name);
+      setArticleContent(res.content);
+      setRevisionNotes((res.notes ?? []).map(toNote));
+      setDocResults([]);
+      toast.success(`Doc "${res.doc.name}" dibaca — ${(res.notes ?? []).length} komentar diimpor.`);
     } catch (err) {
       toast.error("Gagal membaca Google Doc: " + (err as Error).message);
     } finally {
@@ -422,9 +450,31 @@ function ReworkPage() {
           <div className="space-y-6">
             <Card className="p-6">
               <CardTitle className="text-base flex items-center gap-2 mb-4">
-                <FileText className="size-4 text-primary" /> 1. Sumber Konten
+                <FileText className="size-4 text-primary" /> 1. Sumber Konten & Dokumen
               </CardTitle>
               <CardContent className="px-0 space-y-4">
+                <div className="space-y-2 pb-4 border-b">
+                  <label className="text-xs font-medium flex items-center gap-1.5">
+                    <ExternalLink className="size-3.5 text-primary" /> Tempel Link Google Docs
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="https://docs.google.com/document/d/..."
+                      value={docUrl}
+                      onChange={(e) => setDocUrl(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm border rounded-md bg-background"
+                      onKeyDown={(e) => { if (e.key === "Enter") void handleImportUrl(); }}
+                    />
+                    <Button onClick={handleImportUrl} disabled={docImporting === "url"}>
+                      {docImporting === "url" ? <Loader2 className="size-4 animate-spin" /> : "Baca Doc"}
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    AI membaca seluruh isi dokumen + komentar (beserta bagian yang dikomentari, penulis, tanggal) lalu menyimpannya ke Catatan Revisi.
+                  </p>
+                </div>
+
                 <div className="space-y-3 pb-4 border-b">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-medium flex items-center gap-1.5">
@@ -437,7 +487,7 @@ function ReworkPage() {
                       className="h-7 text-xs gap-1"
                       onClick={() => window.open(`https://drive.google.com/drive/search?q=${encodeURIComponent(docQuery || "")}`, "_blank")}
                     >
-                      <ExternalLink className="size-3 text-blue-600" /> Buka Drive
+                      <ExternalLink className="size-3" /> Buka Drive
                     </Button>
                   </div>
                   <div className="flex gap-2">
@@ -447,7 +497,7 @@ function ReworkPage() {
                       value={docQuery}
                       onChange={(e) => setDocQuery(e.target.value)}
                       className="flex-1 px-3 py-2 text-sm border rounded-md bg-background"
-                      onKeyDown={(e) => { if (e.key === "Enter") handleSearchDocs(); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") void handleSearchDocs(); }}
                     />
                     <Button variant="secondary" onClick={handleSearchDocs} disabled={docSearching}>
                       {docSearching ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
@@ -456,43 +506,249 @@ function ReworkPage() {
                   {docResults.length > 0 && (
                     <div className="border rounded-md divide-y max-h-40 overflow-y-auto bg-muted/20">
                       {docResults.map((doc) => (
-                        <div key={doc.id} className="p-2.5 flex items-center justify-between text-xs hover:bg-muted/40">
-                          <span className="truncate w-3/4">{doc.name}</span>
-                          <Button size="sm" variant="outline" onClick={() => handleImportDoc(doc)}>Import</Button>
+                        <div key={doc.id} className="p-2.5 flex items-center justify-between gap-2 text-xs hover:bg-muted/40">
+                          <span className="truncate">{doc.name}</span>
+                          <Button size="sm" variant="outline" onClick={() => handleImportDoc(doc)} disabled={docImporting === doc.id}>
+                            {docImporting === doc.id ? <Loader2 className="size-3 animate-spin" /> : "Import"}
+                          </Button>
                         </div>
                       ))}
                     </div>
                   )}
+                  {activeDoc && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <CheckCircle2 className="size-3.5 text-green-600" />
+                      <span className="truncate">Aktif: {activeDoc.name}</span>
+                      {activeDoc.webViewLink && (
+                        <a href={activeDoc.webViewLink} target="_blank" rel="noreferrer" className="underline">buka</a>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {/* Upload & Content inputs remain same... */}
-                <Textarea placeholder="Judul & Konten..." rows={6} className="text-xs font-mono" value={articleContent} onChange={(e) => setArticleContent(e.target.value)} />
+
+                <div className="space-y-2 pb-4 border-b">
+                  <label className="text-xs font-medium flex items-center gap-1.5">
+                    <Upload className="size-3.5 text-primary" /> Upload File Artikel
+                  </label>
+                  <label className="flex flex-col items-center justify-center gap-1 border border-dashed rounded-md py-6 cursor-pointer hover:bg-muted/30 text-xs text-muted-foreground">
+                    {uploading || extracting ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        {uploading ? "Mengupload..." : "AI mengekstrak dokumen..."}
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="size-4" />
+                        <span>Klik untuk upload file (PDF, Docx, Image, Text)</span>
+                        <span className="text-[11px]">Maksimal 20MB</span>
+                      </>
+                    )}
+                    <input type="file" className="hidden" onChange={handleFileChange} disabled={uploading || extracting} />
+                  </label>
+                  {fileName && <p className="text-[11px] text-muted-foreground truncate">File: {fileName}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Judul Artikel</label>
+                  <input
+                    type="text"
+                    placeholder="Judul artikel..."
+                    value={articleTitle}
+                    onChange={(e) => setArticleTitle(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border rounded-md bg-background"
+                  />
+                  <label className="text-xs font-medium">Isi Artikel</label>
+                  <Textarea
+                    placeholder="Tempel isi artikel di sini..."
+                    rows={10}
+                    className="text-xs font-mono"
+                    value={articleContent}
+                    onChange={(e) => setArticleContent(e.target.value)}
+                  />
+                </div>
               </CardContent>
             </Card>
 
             <Card className="p-6">
-               <CardTitle className="text-base flex items-center gap-2 mb-4">
-                  <ListChecks className="size-4 text-primary" /> 2. Catatan Revisi & AI
-               </CardTitle>
-               <Button onClick={handleAddNote} className="w-full mb-2" variant="outline" size="sm">+ Tambah Catatan</Button>
-               {/* Table revisions... */}
-               <Button className="w-full mt-4" onClick={handleRunRework} disabled={runningRework || !articleContent.trim()}>
-                 {runningRework ? <Loader2 className="size-4 animate-spin" /> : "Jalankan AI Rework"}
-               </Button>
+              <CardTitle className="text-base flex items-center gap-2 mb-4">
+                <ListChecks className="size-4 text-primary" /> 2. Catatan Revisi & Prompt
+              </CardTitle>
+              <CardContent className="px-0 space-y-4">
+                <div className="flex gap-2">
+                  <Button onClick={handleAddNote} variant="outline" size="sm" className="flex-1 gap-1">
+                    <Plus className="size-3.5" /> Tambah Catatan
+                  </Button>
+                  <Button onClick={handleAiReviewNotes} variant="secondary" size="sm" className="flex-1 gap-1" disabled={reviewingNotes}>
+                    {reviewingNotes ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />} AI Review
+                  </Button>
+                </div>
+
+                {revisionNotes.length === 0 ? (
+                  <p className="text-xs text-muted-foreground border rounded-md p-4 text-center">
+                    Belum ada catatan revisi. Impor Google Doc, upload file, atau tambah manual.
+                  </p>
+                ) : (
+                  <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                    {revisionNotes.map((n, idx) => (
+                      <div key={n.id ?? idx} className="border rounded-md p-3 space-y-2 bg-muted/10">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                            <Badge variant="outline" className="text-[10px]">#{idx + 1}</Badge>
+                            <User className="size-3" />
+                            <span>{n.author || "Manual"}</span>
+                            {n.commented_at && <span>• {new Date(n.commented_at).toLocaleString("id-ID")}</span>}
+                          </div>
+                          <Button size="icon" variant="ghost" className="size-7" onClick={() => handleDeleteNote(idx)}>
+                            <Trash2 className="size-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-medium">Bagian Yang Direvisi</label>
+                            <Textarea
+                              rows={4}
+                              className="text-xs"
+                              value={n.location ?? ""}
+                              onChange={(e) => handleNoteChange(idx, "location", e.target.value)}
+                              onBlur={() => handleNoteBlur(idx)}
+                              placeholder="Kutipan teks dari dokumen..."
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[11px] font-medium">Apa yang Harus Direvisi</label>
+                            <Textarea
+                              rows={4}
+                              className="text-xs"
+                              value={n.note ?? ""}
+                              onChange={(e) => handleNoteChange(idx, "note", e.target.value)}
+                              onBlur={() => handleNoteBlur(idx)}
+                              placeholder="Instruksi editor..."
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[11px] font-medium">Rekomendasi AI</label>
+                              <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={() => handleGenerateRecommendation(idx)} disabled={n.isGeneratingRec}>
+                                {n.isGeneratingRec ? <Loader2 className="size-3 animate-spin" /> : <Bot className="size-3" />} Buat
+                              </Button>
+                            </div>
+                            <Textarea
+                              rows={3}
+                              className="text-xs"
+                              value={n.ai_recommendation ?? ""}
+                              onChange={(e) => handleNoteChange(idx, "ai_recommendation", e.target.value)}
+                              onBlur={() => handleNoteBlur(idx)}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[11px] font-medium">Kalimat Pengganti AI</label>
+                              <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={() => handleGenerateAiResult(idx)} disabled={n.isGeneratingRes}>
+                                {n.isGeneratingRes ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />} Susun
+                              </Button>
+                            </div>
+                            <Textarea
+                              rows={3}
+                              className="text-xs"
+                              value={n.ai_result ?? ""}
+                              onChange={(e) => handleNoteChange(idx, "ai_result", e.target.value)}
+                              onBlur={() => handleNoteBlur(idx)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Prompt Manual</label>
+                  <Textarea
+                    rows={3}
+                    className="text-xs"
+                    placeholder="Perintah tambahan untuk AI..."
+                    value={manualPrompt}
+                    onChange={(e) => setManualPrompt(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Cakupan Rework</label>
+                  <Select value={scope} onValueChange={(v) => setScope(v as "full" | "partial")}>
+                    <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full">Rework menyeluruh</SelectItem>
+                      <SelectItem value="partial">Hanya bagian yang dikomentari</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button className="w-full gap-2" onClick={handleRunRework} disabled={runningRework || !articleContent.trim()}>
+                  {runningRework ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} Jalankan AI Rework
+                </Button>
+              </CardContent>
             </Card>
           </div>
 
           <div>
-             <Card className="p-6 h-full">
-               <CardTitle className="text-base">Hasil Rework</CardTitle>
-               {result ? (
-                 <Tabs defaultValue="article">
-                   <TabsList><TabsTrigger value="article">Artikel</TabsTrigger><TabsTrigger value="changes">Perubahan</TabsTrigger><TabsTrigger value="crosscheck">Crosscheck</TabsTrigger></TabsList>
-                   <TabsContent value="article" className="whitespace-pre-wrap font-mono text-xs">{result.content}</TabsContent>
-                 </Tabs>
-               ) : (
-                 <div className="h-64 flex items-center justify-center text-muted-foreground text-xs">Menunggu hasil rework...</div>
-               )}
-             </Card>
+            <Card className="p-6 h-full">
+              <CardHeader className="px-0 pt-0 flex-row items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CheckCircle className="size-4 text-primary" /> Hasil Rework
+                </CardTitle>
+                {result && (
+                  <Button size="sm" variant="outline" className="gap-1" onClick={handleSaveToDb} disabled={saving || !!savedId}>
+                    {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                    {savedId ? "Tersimpan" : "Simpan"}
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent className="px-0">
+                {result ? (
+                  <Tabs defaultValue="article">
+                    <TabsList>
+                      <TabsTrigger value="article">Artikel</TabsTrigger>
+                      <TabsTrigger value="changes">Perubahan</TabsTrigger>
+                      <TabsTrigger value="crosscheck">Crosscheck</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="article" className="whitespace-pre-wrap font-mono text-xs max-h-[70vh] overflow-y-auto">
+                      <p className="font-sans font-semibold text-sm mb-2">{result.title}</p>
+                      {result.content}
+                    </TabsContent>
+                    <TabsContent value="changes" className="space-y-2 text-xs max-h-[70vh] overflow-y-auto">
+                      {result.summary && <p className="text-muted-foreground">{result.summary}</p>}
+                      {(result.changes ?? []).map((c: any, i: number) => (
+                        <div key={i} className="border rounded-md p-2.5 space-y-1">
+                          <p className="font-medium">{c.title || c.section || `Perubahan ${i + 1}`}</p>
+                          {c.before && <p className="text-muted-foreground line-through">{c.before}</p>}
+                          {c.after && <p>{c.after}</p>}
+                          {c.reason && <p className="text-[11px] text-muted-foreground">Alasan: {c.reason}</p>}
+                        </div>
+                      ))}
+                    </TabsContent>
+                    <TabsContent value="crosscheck" className="space-y-2 text-xs max-h-[70vh] overflow-y-auto">
+                      <div className="flex items-center gap-2">
+                        <Badge>{result.crosscheck?.score ?? 0}/100</Badge>
+                        <span className="text-muted-foreground">{result.crosscheck?.verdict}</span>
+                      </div>
+                      {(result.crosscheck?.items ?? []).map((it: any, i: number) => (
+                        <div key={i} className="border rounded-md p-2.5 space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            {it.fulfilled ? <CheckCircle2 className="size-3.5 text-green-600" /> : <RefreshCw className="size-3.5 text-amber-600" />}
+                            <span className="font-medium">{it.note || it.instruction || `Catatan ${i + 1}`}</span>
+                          </div>
+                          {it.evidence && <p className="text-muted-foreground">{it.evidence}</p>}
+                        </div>
+                      ))}
+                    </TabsContent>
+                  </Tabs>
+                ) : (
+                  <div className="h-64 flex items-center justify-center text-muted-foreground text-xs">Menunggu hasil rework...</div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

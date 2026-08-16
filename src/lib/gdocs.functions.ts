@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { searchDocs, fetchDocComments, fetchDocContent, fetchDocMeta } from "@/lib/gdocs.shared";
+import { searchDocs, fetchDocComments, fetchDocContent, fetchDocMeta, parseDocId } from "@/lib/gdocs.shared";
 
 export const searchGoogleDocs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -10,12 +10,13 @@ export const searchGoogleDocs = createServerFn({ method: "POST" })
 
 export const importGoogleDoc = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ project_id: z.string().uuid(), doc_id: z.string().min(5).max(200) }).parse(d))
+  .inputValidator((d) => z.object({ project_id: z.string().uuid(), doc_id: z.string().min(5).max(500) }).parse(d))
   .handler(async ({ data, context }) => {
+    const docId = parseDocId(data.doc_id);
     const [meta, content, comments] = await Promise.all([
-      fetchDocMeta(data.doc_id),
-      fetchDocContent(data.doc_id),
-      fetchDocComments(data.doc_id),
+      fetchDocMeta(docId),
+      fetchDocContent(docId),
+      fetchDocComments(docId),
     ]);
 
     await context.supabase.from("doc_revision_notes").delete().eq("project_id", data.project_id).eq("doc_id", meta.id);
