@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Toaster, toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProject } from "@/hooks/use-active-project";
+import { TONE_LABELS, type ToneLevel } from "@/lib/articles.prompt";
 import { extractArticleFile, reviewRevisionNotes, runRework, saveRework, generateReplacementSentence } from "@/lib/rework.functions";
 import {
   searchGoogleDocs,
@@ -77,6 +78,7 @@ function ReworkPage() {
   const [revisionNotes, setRevisionNotes] = useState<RevisionNote[]>([]);
   const [manualPrompt, setManualPrompt] = useState("");
   const [scope, setScope] = useState<"full" | "partial">("full");
+  const [tone, setTone] = useState<ToneLevel>("praktis");
 
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
@@ -400,6 +402,7 @@ function ReworkPage() {
           revision_notes: revisionNotes,
           manual_prompt: manualPrompt,
           scope: scope,
+          tone,
         },
       });
 
@@ -718,6 +721,18 @@ function ReworkPage() {
                     value={manualPrompt}
                     onChange={(e) => setManualPrompt(e.target.value)}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Tone of Voice (ARS)</label>
+                  <Select value={tone} onValueChange={(v) => setTone(v as ToneLevel)}>
+                    <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(TONE_LABELS) as ToneLevel[]).map((t) => (
+                        <SelectItem key={t} value={t}>{TONE_LABELS[t]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
