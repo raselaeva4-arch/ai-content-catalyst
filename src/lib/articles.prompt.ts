@@ -178,3 +178,13 @@ export function computeReadability(markdown: string): ReadabilityStats {
     simple_score: score,
   };
 }
+
+export function buildTonePromptBlock(tone: ToneLevel) {
+  return `=== TEMPLATE PROMPT ARS TONE (WAJIB DIIKUTI) ===
+MODE TONE YANG DIPILIH: ${TONE_LABELS[tone]}
+${TONE_INSTRUCTION[tone]}
+
+${ARS_TONE_RULES}
+
+SEBELUM OUTPUT: baca ulang hasilmu, sederhanakan setiap kalimat yang terdengar akademis atau birokratis, pecah kalimat panjang, dan ganti jargon dengan bahasa sehari-hari.`;
+}
