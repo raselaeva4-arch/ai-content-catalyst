@@ -781,9 +781,11 @@ function ReworkPage() {
                       <TabsTrigger value="changes">Perubahan</TabsTrigger>
                       <TabsTrigger value="crosscheck">Crosscheck & Tone</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="article" className="whitespace-pre-wrap font-mono text-xs max-h-[70vh] overflow-y-auto">
+                    <TabsContent value="article" className="font-mono text-xs max-h-[70vh] overflow-y-auto">
                       <p className="font-sans font-semibold text-sm mb-2">{result.title}</p>
-                      {result.content}
+                      <div className="whitespace-pre-wrap leading-relaxed">
+                        {highlightRevisions(result.content, result.changes)}
+                      </div>
                     </TabsContent>
                     <TabsContent value="changes" className="space-y-2 text-xs max-h-[70vh] overflow-y-auto">
                       {result.summary && <p className="text-muted-foreground">{result.summary}</p>}
