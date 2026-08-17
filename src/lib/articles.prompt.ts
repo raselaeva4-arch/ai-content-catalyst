@@ -6,7 +6,7 @@ export const TONE_LABELS: Record<ToneLevel, string> = {
   formal: "Faktual & Ringkas (news / institutional)",
 };
 
-const TONE_INSTRUCTION: Record<ToneLevel, string> = {
+export const TONE_INSTRUCTION: Record<ToneLevel, string> = {
   santai:
     "Jenis: Business & Mentorship Blog. Hangat, relatable, personal, boleh memakai 'saya'. Banyak contoh nyata, lessons learned, dan analogi sederhana. Kalimat pendek (maks 18 kata). Nol jargon.",
   praktis:
@@ -177,4 +177,14 @@ export function computeReadability(markdown: string): ReadabilityStats {
     passive_hits: passive,
     simple_score: score,
   };
+}
+
+export function buildTonePromptBlock(tone: ToneLevel) {
+  return `=== TEMPLATE PROMPT ARS TONE (WAJIB DIIKUTI) ===
+MODE TONE YANG DIPILIH: ${TONE_LABELS[tone]}
+${TONE_INSTRUCTION[tone]}
+
+${ARS_TONE_RULES}
+
+SEBELUM OUTPUT: baca ulang hasilmu, sederhanakan setiap kalimat yang terdengar akademis atau birokratis, pecah kalimat panjang, dan ganti jargon dengan bahasa sehari-hari.`;
 }

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { ARS_TONE_RULES } from "@/lib/articles.prompt";
+import { ARS_TONE_RULES, buildTonePromptBlock, type ToneLevel } from "@/lib/articles.prompt";
 import { callAi, fileToBase64, EXTRACT_SCHEMA, REWORK_SCHEMA } from "@/lib/rework.shared";
 
 const ARS_MASTER_PLAYBOOK = `
@@ -138,6 +138,7 @@ export const generateReplacementSentence = createServerFn({ method: "POST" })
       article_content: z.string().max(100000),
       location: z.string().optional().default(""),
       note: z.string(),
+      tone: z.enum(["santai", "praktis", "formal"]).optional().default("praktis"),
     }).parse(d),
   )
   .handler(async ({ data }) => {
@@ -150,6 +151,8 @@ export const generateReplacementSentence = createServerFn({ method: "POST" })
 
     === KUTIPAN TEKS ASLI ===
     "${data.location}"
+
+    ${buildTonePromptBlock(data.tone as ToneLevel)}
 
     === INSTRUKSI EDITOR ===
     "${data.note}"
@@ -195,6 +198,7 @@ export const runRework = createServerFn({ method: "POST" })
           .default([]),
         manual_prompt: z.string().max(10000).optional().default(""),
         scope: z.enum(["full", "partial"]).optional().default("full"),
+        tone: z.enum(["santai", "praktis", "formal"]).optional().default("praktis"),
       })
       .parse(d),
   )
@@ -240,7 +244,7 @@ export const runRework = createServerFn({ method: "POST" })
         ? "Ubah HANYA bagian yang disebut catatan revisi / perintah manual. Terapkan tone Arsjad Rasjid (membumi, praktikal, easy to digest). Integrasikan hasil kalimat pengganti dengan mulus agar nyambung dengan bagian artikel lainnya.\n"
         : "Rework menyeluruh berdasarkan catatan revisi di atas dengan menerapkan tone Arsjad Rasjid secara utuh (praktis, kredibel, membumi, optimis, tanpa istilah akademis/birokratis yang kaku). Jaga agar alur baca tetap runtut, padu, dan easy to digest.\n";
     
-    userText += `\n${ARS_TONE_RULES}\n\nHasilkan artikel versi terbaru, daftar poin perubahan, dan crosscheck tiap catatan revisi, termasuk penilaian kesesuaian tone.`;
+    userText += `\n${buildTonePromptBlock(data.tone as ToneLevel)}\n\nHasilkan artikel versi terbaru, daftar poin perubahan, dan crosscheck tiap catatan revisi, termasuk penilaian kesesuaian tone.`;
 
     const json = await callAi(apiKey, {
       model: "google/gemini-2.5-flash",
