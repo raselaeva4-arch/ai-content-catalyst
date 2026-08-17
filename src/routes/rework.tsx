@@ -312,6 +312,7 @@ function ReworkPage() {
           article_content: articleContent,
           location: note.location || "",
           note: note.note,
+          tone,
         },
       });
 
