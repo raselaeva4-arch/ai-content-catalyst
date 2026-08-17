@@ -59,6 +59,58 @@ type ReworkResult = {
   };
 };
 
+function escapeRegExp(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Menyorot bagian artikel yang sudah direvisi/diganti dengan blok warna hijau cerah.
+// Mencocokkan teks `after` dari tiap perubahan di dalam isi artikel.
+function highlightRevisions(content: string, changes: any[]): React.ReactNode[] {
+  if (!content) return [];
+  // Kumpulkan semua teks "after" yang unik dan cukup panjang untuk ditandai.
+  const needles = Array.from(
+    new Set(
+      (changes ?? [])
+        .map((c) => (c.after ?? "").trim())
+        .filter((t) => t && t.length >= 4),
+    ),
+  );
+  if (needles.length === 0) return [content];
+
+  // Gabungkan semua needle jadi satu regex dengan alternation, urutkan panjang desc.
+  const pattern = needles
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRegExp)
+    .join("|");
+  const regex = new RegExp(`(${pattern})`, "g");
+
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = regex.exec(content)) !== null) {
+    if (m.index > last) parts.push(content.slice(last, m.index));
+    parts.push(
+      <mark
+        key={`hl-${key++}`}
+        className="rounded px-0.5 py-0.5 text-foreground"
+        style={{
+          backgroundColor: "oklch(0.85 0.21 145)",
+          color: "oklch(0.2 0.04 260)",
+          boxShadow: "0 0 0 1px oklch(0.7 0.18 145 / 0.4)",
+        }}
+      >
+        {m[0]}
+      </mark>,
+    );
+    last = m.index + m[0].length;
+    // Hindari infinite loop pada zero-length match.
+    if (m[0].length === 0) regex.lastIndex++;
+  }
+  if (last < content.length) parts.push(content.slice(last));
+  return parts;
+}
+
 function ReworkPage() {
   const { projectId } = useActiveProject();
 
