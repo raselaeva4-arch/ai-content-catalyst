@@ -54,8 +54,9 @@ export const importGoogleDoc = createServerFn({ method: "POST" })
     if (rows.length) {
       const { data: inserted, error } = await context.supabase.from("doc_revision_notes").insert(rows).select();
       if (error) throw new Error(error.message);
-      saved = inserted ?? [];
+      saved = (inserted ?? []).sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0));
     }
+
 
     return { doc: meta, content, notes: saved };
   });
