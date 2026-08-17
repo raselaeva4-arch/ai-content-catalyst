@@ -6,7 +6,7 @@ export const TONE_LABELS: Record<ToneLevel, string> = {
   formal: "Faktual & Ringkas (news / institutional)",
 };
 
-const TONE_INSTRUCTION: Record<ToneLevel, string> = {
+export const TONE_INSTRUCTION: Record<ToneLevel, string> = {
   santai:
     "Jenis: Business & Mentorship Blog. Hangat, relatable, personal, boleh memakai 'saya'. Banyak contoh nyata, lessons learned, dan analogi sederhana. Kalimat pendek (maks 18 kata). Nol jargon.",
   praktis:
