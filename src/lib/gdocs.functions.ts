@@ -21,7 +21,20 @@ export const importGoogleDoc = createServerFn({ method: "POST" })
 
     await context.supabase.from("doc_revision_notes").delete().eq("project_id", data.project_id).eq("doc_id", meta.id);
 
-    const rows = comments.map((c, i) => ({
+    // Urutkan komentar sesuai urutan kemunculan teks yang dikomentari di dalam dokumen.
+    const norm = (s: string) => s.replace(/\s+/g, " ").trim();
+    const flatContent = norm(content);
+    const ordered = comments
+      .map((c, i) => {
+        const q = norm(c.section);
+        let idx = q ? flatContent.indexOf(q) : -1;
+        if (idx === -1 && q.length > 40) idx = flatContent.indexOf(q.slice(0, 40));
+        return { c, i, idx: idx === -1 ? Number.MAX_SAFE_INTEGER : idx };
+      })
+      .sort((a, b) => (a.idx !== b.idx ? a.idx - b.idx : a.i - b.i))
+      .map((x) => x.c);
+
+    const rows = ordered.map((c, i) => ({
       project_id: data.project_id,
       doc_id: meta.id,
       doc_name: meta.name,
@@ -35,6 +48,7 @@ export const importGoogleDoc = createServerFn({ method: "POST" })
       ai_recommendation: null,
       ai_result: null,
     }));
+
 
     let saved: any[] = [];
     if (rows.length) {
