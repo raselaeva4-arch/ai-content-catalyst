@@ -170,6 +170,8 @@ function ReworkPage() {
   const loadSavedNotes = useCallback(async () => {
     if (!projectId) return;
     try {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session) return;
       const res = await listNotesFn({ data: { project_id: projectId } });
       if (res.items.length) {
         setRevisionNotes(res.items.map(toNote));
