@@ -594,14 +594,18 @@ function ReworkPage() {
                     <label className="text-xs font-medium flex items-center gap-1.5">
                       <FileSearch className="size-3.5 text-primary" /> Cari Google Docs
                     </label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs gap-1"
-                      onClick={() => window.open(`https://drive.google.com/drive/search?q=${encodeURIComponent(docQuery || "")}`, "_blank")}
-                    >
-                      <ExternalLink className="size-3" /> Buka Drive
+                    <Button asChild type="button" variant="outline" size="sm" className="h-7 text-xs gap-1">
+                      <a
+                        href={
+                          docQuery.trim()
+                            ? `https://drive.google.com/drive/u/0/search?q=${encodeURIComponent(docQuery.trim())}`
+                            : "https://drive.google.com/drive/u/0/my-drive"
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="size-3" /> Buka Drive
+                      </a>
                     </Button>
                   </div>
                   <div className="flex gap-2">
