@@ -16,6 +16,7 @@ import { Route as HistoryRouteImport } from './routes/history'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as ReworkRouteImport } from './routes/rework'
+import { Route as ReworkHistoryRouteImport } from './routes/rework-history'
 import { Route as TranscriptsRouteImport } from './routes/transcripts'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -56,6 +57,11 @@ const ProjectsRoute = ProjectsRouteImport.update({
 const ReworkRoute = ReworkRouteImport.update({
   id: '/rework',
   path: '/rework',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReworkHistoryRoute = ReworkHistoryRouteImport.update({
+  id: '/rework-history',
+  path: '/rework-history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TranscriptsRoute = TranscriptsRouteImport.update({
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/projects': typeof ProjectsRoute
   '/rework': typeof ReworkRoute
+  '/rework-history': typeof ReworkHistoryRoute
   '/transcripts': typeof TranscriptsRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/projects': typeof ProjectsRoute
   '/rework': typeof ReworkRoute
+  '/rework-history': typeof ReworkHistoryRoute
   '/transcripts': typeof TranscriptsRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/projects': typeof ProjectsRoute
   '/rework': typeof ReworkRoute
+  '/rework-history': typeof ReworkHistoryRoute
   '/transcripts': typeof TranscriptsRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/projects'
     | '/rework'
+    | '/rework-history'
     | '/transcripts'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/projects'
     | '/rework'
+    | '/rework-history'
     | '/transcripts'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/projects'
     | '/rework'
+    | '/rework-history'
     | '/transcripts'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -194,6 +206,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   ProjectsRoute: typeof ProjectsRoute
   ReworkRoute: typeof ReworkRoute
+  ReworkHistoryRoute: typeof ReworkHistoryRoute
   TranscriptsRoute: typeof TranscriptsRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -250,6 +263,13 @@ declare module '@tanstack/react-router' {
       path: '/rework'
       fullPath: '/rework'
       preLoaderRoute: typeof ReworkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rework-history': {
+      id: '/rework-history'
+      path: '/rework-history'
+      fullPath: '/rework-history'
+      preLoaderRoute: typeof ReworkHistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/transcripts': {
@@ -316,6 +336,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   ProjectsRoute: ProjectsRoute,
   ReworkRoute: ReworkRoute,
+  ReworkHistoryRoute: ReworkHistoryRoute,
   TranscriptsRoute: TranscriptsRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:

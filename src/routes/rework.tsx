@@ -544,6 +544,11 @@ function ReworkPage() {
             <h1 className="text-sm font-semibold">AI Article Rework Studio</h1>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/rework-history">
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                <ListChecks className="size-3.5" /> Riwayat Rework
+              </Button>
+            </Link>
             <Button variant="outline" size="sm" className="gap-1.5 text-xs text-destructive hover:text-destructive" onClick={handleResetAll}>
               <RotateCcw className="size-3.5" /> Reset Data (Step 0)
             </Button>
