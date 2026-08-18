@@ -292,15 +292,33 @@ function ReworkCard({ item, editing, expanded, onToggleExpand, onEdit, onCancel,
           {changesCount > 0 && (
             <section>
               <div className="text-xs font-semibold mb-1.5">Poin Perubahan ({changesCount})</div>
-              <ul className="space-y-1.5">
+              <div className="space-y-2">
                 {(item.changes ?? []).map((c: any, i: number) => (
-                  <li key={i} className="text-sm rounded-md bg-muted/30 p-2">
-                    {c.before && <div className="text-xs text-muted-foreground line-through">Sebelum: {String(c.before).slice(0, 140)}</div>}
-                    {c.after && <div className="text-xs">Sesudah: {String(c.after).slice(0, 140)}</div>}
-                    {c.reason && <div className="text-[11px] text-muted-foreground italic mt-0.5">{String(c.reason)}</div>}
-                  </li>
+                  <div key={i} className="rounded-md border border-border/60 overflow-hidden">
+                    <div className="grid grid-cols-2 divide-x divide-border/60">
+                      <div className="p-2">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-red-600 dark:text-red-400 mb-1">Before</div>
+                        <div className="text-sm whitespace-pre-wrap break-words text-red-700 dark:text-red-300 line-through decoration-red-500/60">
+                          {c.before ? String(c.before) : <span className="text-muted-foreground italic">— kosong —</span>}
+                        </div>
+                      </div>
+                      <div className="p-2 bg-sky-50 dark:bg-sky-950/30">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300 mb-1">After</div>
+                        <div className="text-sm whitespace-pre-wrap break-words text-sky-800 dark:text-sky-200">
+                          {c.after ? String(c.after) : <span className="text-muted-foreground italic">— kosong —</span>}
+                        </div>
+                      </div>
+                    </div>
+                    {(c.section || c.reason || c.kind) && (
+                      <div className="flex items-center gap-2 px-2 py-1.5 bg-muted/40 border-t border-border/60 text-[11px] text-muted-foreground">
+                        {c.kind && <Badge variant="outline" className="text-[10px] capitalize">{String(c.kind)}</Badge>}
+                        {c.section && <span className="truncate">§ {String(c.section)}</span>}
+                        {c.reason && <span className="italic truncate">— {String(c.reason).slice(0, 120)}</span>}
+                      </div>
+                    )}
+                  </div>
                 ))}
-              </ul>
+              </div>
             </section>
           )}
           <section>
