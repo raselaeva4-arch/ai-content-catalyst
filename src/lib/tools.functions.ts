@@ -75,7 +75,7 @@ export const updatePortalTool = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { id, ...rest } = data;
-    const patch: Record<string, unknown> = { ...rest };
+    const patch = { ...rest };
     if (typeof rest.slug === "string") patch.slug = slugify(rest.slug);
     const { data: row, error } = await context.supabase
       .from("portal_tools")
