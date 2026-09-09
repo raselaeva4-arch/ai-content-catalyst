@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { PortalSidebar } from "@/components/portal-sidebar";
 
 import appCss from "../styles.css?url";
 
@@ -121,7 +122,9 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthGate>
-        <Outlet />
+        <PortalSidebar>
+          <Outlet />
+        </PortalSidebar>
       </AuthGate>
     </QueryClientProvider>
   );
