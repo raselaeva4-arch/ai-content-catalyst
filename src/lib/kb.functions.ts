@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { publicAccess } from "@/lib/public-access";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const KbSchema = z.object({
@@ -19,7 +19,7 @@ const KbFileSchema = z.object({
 });
 
 export const listKb = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
@@ -32,7 +32,7 @@ export const listKb = createServerFn({ method: "POST" })
   });
 
 export const saveKb = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => KbSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
@@ -50,7 +50,7 @@ export const saveKb = createServerFn({ method: "POST" })
   });
 
 export const deleteKb = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("knowledge_base").delete().eq("id", data.id);
@@ -74,7 +74,7 @@ Format output: teks bersih terstruktur (gunakan heading, bullet, list).
 Jangan berikan opini — hanya ekstrak isi. Bahasa: pertahankan bahasa asli dokumen.`;
 
 export const saveKbFile = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => KbFileSchema.parse(d))
   .handler(async ({ data, context }) => {
     const apiKey = process.env.LOVABLE_API_KEY;

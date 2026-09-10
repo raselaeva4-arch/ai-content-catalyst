@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { publicAccess } from "@/lib/public-access";
 
 export const DEFAULT_PROJECT_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -12,7 +12,7 @@ const CreateSchema = z.object({
 const UpdateSchema = CreateSchema.partial().extend({ id: z.string().uuid() });
 
 export const listProjects = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("projects")
@@ -23,7 +23,7 @@ export const listProjects = createServerFn({ method: "POST" })
   });
 
 export const createProject = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => CreateSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
@@ -36,7 +36,7 @@ export const createProject = createServerFn({ method: "POST" })
   });
 
 export const updateProject = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => UpdateSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
@@ -51,7 +51,7 @@ export const updateProject = createServerFn({ method: "POST" })
   });
 
 export const deleteProject = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     if (data.id === DEFAULT_PROJECT_ID) {

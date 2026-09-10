@@ -1,15 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { publicAccess } from "@/lib/public-access";
 import { searchDocs, fetchDocComments, fetchDocContent, fetchDocMeta, parseDocId } from "@/lib/gdocs.shared";
 
 export const searchGoogleDocs = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ query: z.string().max(200).optional().default("") }).parse(d))
   .handler(async ({ data }) => ({ items: await searchDocs(data.query) }));
 
 export const importGoogleDoc = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ project_id: z.string().uuid(), doc_id: z.string().min(5).max(500) }).parse(d))
   .handler(async ({ data, context }) => {
     const docId = parseDocId(data.doc_id);
@@ -62,7 +62,7 @@ export const importGoogleDoc = createServerFn({ method: "POST" })
   });
 
 export const listDocRevisionNotes = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ project_id: z.string().uuid(), doc_id: z.string().optional() }).parse(d))
   .handler(async ({ data, context }) => {
     let q = context.supabase
@@ -77,7 +77,7 @@ export const listDocRevisionNotes = createServerFn({ method: "POST" })
   });
 
 export const createDocRevisionNote = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) =>
     z
       .object({
@@ -102,7 +102,7 @@ export const createDocRevisionNote = createServerFn({ method: "POST" })
   });
 
 export const updateDocRevisionNote = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) =>
     z
       .object({
@@ -130,7 +130,7 @@ export const updateDocRevisionNote = createServerFn({ method: "POST" })
   });
 
 export const deleteDocRevisionNote = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("doc_revision_notes").delete().eq("id", data.id);

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { FolderKanban, Settings, Loader2, LogOut } from "lucide-react";
+import { FolderKanban, Settings, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActiveProject } from "@/hooks/use-active-project";
@@ -61,9 +61,6 @@ export function ProjectSwitcher() {
     return () => { supabase.removeChannel(channel); };
   }, [listFn]);
 
-  async function signOut() {
-    await supabase.auth.signOut();
-  }
 
   if (!mounted) return null;
 
@@ -106,9 +103,6 @@ export function ProjectSwitcher() {
           <Settings className="size-3.5" />
         </Button>
       </Link>
-      <Button variant="ghost" size="icon" className="size-8 shrink-0" title="Sign out" onClick={signOut}>
-        <LogOut className="size-3.5" />
-      </Button>
     </div>
   );
 }

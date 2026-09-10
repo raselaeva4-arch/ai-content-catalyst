@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { publicAccess } from "@/lib/public-access";
 import {
   buildSystemPrompt,
   ARTICLE_TOOL_SCHEMA,
@@ -43,7 +43,7 @@ const SaveSchema = z.object({
 const UpdateSchema = SaveSchema.partial().extend({ id: z.string().uuid() });
 
 export const generateArticle = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => GenerateSchema.parse(d))
   .handler(async ({ data, context }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -119,7 +119,7 @@ export const generateArticle = createServerFn({ method: "POST" })
   });
 
 export const listArticles = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
@@ -132,7 +132,7 @@ export const listArticles = createServerFn({ method: "POST" })
   });
 
 export const saveArticle = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => SaveSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
@@ -145,7 +145,7 @@ export const saveArticle = createServerFn({ method: "POST" })
   });
 
 export const updateArticle = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => UpdateSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
@@ -160,7 +160,7 @@ export const updateArticle = createServerFn({ method: "POST" })
   });
 
 export const deleteArticle = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("articles").delete().eq("id", data.id);

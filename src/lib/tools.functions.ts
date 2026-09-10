@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { publicAccess } from "@/lib/public-access";
 
 const slugify = (s: string) =>
   s
@@ -21,7 +21,7 @@ const toolInput = z.object({
 });
 
 export const listPortalTools = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("portal_tools")
@@ -33,7 +33,7 @@ export const listPortalTools = createServerFn({ method: "GET" })
   });
 
 export const getPortalTool = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d: unknown) => z.object({ slug: z.string() }).parse(d))
   .handler(async ({ context, data }) => {
     const { data: row, error } = await context.supabase
@@ -46,7 +46,7 @@ export const getPortalTool = createServerFn({ method: "GET" })
   });
 
 export const createPortalTool = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d: unknown) => toolInput.parse(d))
   .handler(async ({ context, data }) => {
     const slug = slugify(data.slug || data.name);
@@ -69,7 +69,7 @@ export const createPortalTool = createServerFn({ method: "POST" })
   });
 
 export const updatePortalTool = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d: unknown) =>
     toolInput.partial().extend({ id: z.string().uuid() }).parse(d),
   )
@@ -88,7 +88,7 @@ export const updatePortalTool = createServerFn({ method: "POST" })
   });
 
 export const deletePortalTool = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { error } = await context.supabase.from("portal_tools").delete().eq("id", data.id);

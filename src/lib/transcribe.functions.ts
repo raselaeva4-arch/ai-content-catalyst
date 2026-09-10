@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { publicAccess } from "@/lib/public-access";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const InputSchema = z.object({
@@ -23,7 +23,7 @@ async function fileToBase64(client: SupabaseClient, path: string): Promise<strin
 }
 
 export const transcribeMedia = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => InputSchema.parse(d))
   .handler(async ({ data, context }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
