@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { publicAccess } from "@/lib/public-access";
 
 const SaveSchema = z.object({
   project_id: z.string().uuid(),
@@ -18,7 +18,7 @@ const SaveSchema = z.object({
 const UpdateSchema = SaveSchema.partial().extend({ id: z.string().uuid() });
 
 export const listHistory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
@@ -31,7 +31,7 @@ export const listHistory = createServerFn({ method: "POST" })
   });
 
 export const saveHistory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => SaveSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
@@ -44,7 +44,7 @@ export const saveHistory = createServerFn({ method: "POST" })
   });
 
 export const updateHistory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => UpdateSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
@@ -59,7 +59,7 @@ export const updateHistory = createServerFn({ method: "POST" })
   });
 
 export const deleteHistory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("saved_generations").delete().eq("id", data.id);
@@ -68,7 +68,7 @@ export const deleteHistory = createServerFn({ method: "POST" })
   });
 
 export const getHistoryById = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase

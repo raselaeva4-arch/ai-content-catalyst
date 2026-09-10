@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { publicAccess } from "@/lib/public-access";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const InputSchema = z.object({
@@ -102,7 +102,7 @@ async function fileToBase64(client: SupabaseClient, path: string): Promise<strin
 }
 
 export const analyzeContent = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => InputSchema.parse(d))
   .handler(async ({ data, context }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -212,7 +212,7 @@ export const analyzeContent = createServerFn({ method: "POST" })
   });
 
 export const listAnalyses = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows } = await context.supabase

@@ -87,10 +87,10 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { publicAccess } from "@/lib/public-access";
 
 export const transcribeUrl = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => InputSchema.parse(d))
   .handler(async ({ data }) => {
     const apiKey = process.env.LOVABLE_API_KEY;

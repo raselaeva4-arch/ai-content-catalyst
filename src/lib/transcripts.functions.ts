@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { publicAccess } from "@/lib/public-access";
 
 const CreateSchema = z.object({
   project_id: z.string().uuid(),
@@ -17,7 +17,7 @@ const CreateSchema = z.object({
 const UpdateSchema = CreateSchema.partial().extend({ id: z.string().uuid() });
 
 export const listTranscripts = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
@@ -30,7 +30,7 @@ export const listTranscripts = createServerFn({ method: "POST" })
   });
 
 export const getTranscriptById = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
@@ -43,7 +43,7 @@ export const getTranscriptById = createServerFn({ method: "POST" })
   });
 
 export const createTranscript = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => CreateSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
@@ -56,7 +56,7 @@ export const createTranscript = createServerFn({ method: "POST" })
   });
 
 export const updateTranscript = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => UpdateSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
@@ -71,7 +71,7 @@ export const updateTranscript = createServerFn({ method: "POST" })
   });
 
 export const deleteTranscript = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("transcripts").delete().eq("id", data.id);

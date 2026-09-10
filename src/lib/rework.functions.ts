@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { publicAccess } from "@/lib/public-access";
 import { ARS_TONE_RULES, buildTonePromptBlock, type ToneLevel } from "@/lib/articles.prompt";
 import { callAi, fileToBase64, EXTRACT_SCHEMA, REWORK_SCHEMA } from "@/lib/rework.shared";
 
@@ -22,7 +22,7 @@ ARSJAD RASJID MASTER NARRATIVE & PLAYBOOK:
 `;
 
 export const extractArticleFile = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) =>
     z.object({ path: z.string().min(1), name: z.string().min(1), mime: z.string().min(1) }).parse(d),
   )
@@ -81,7 +81,7 @@ export const extractArticleFile = createServerFn({ method: "POST" })
   });
 
 export const reviewRevisionNotes = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) =>
     z
       .object({ 
@@ -132,7 +132,7 @@ export const reviewRevisionNotes = createServerFn({ method: "POST" })
   });
 
 export const generateReplacementSentence = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) =>
     z.object({
       article_content: z.string().max(100000),
@@ -176,7 +176,7 @@ export const generateReplacementSentence = createServerFn({ method: "POST" })
   });
 
 export const runRework = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) =>
     z
       .object({
@@ -278,7 +278,7 @@ export const runRework = createServerFn({ method: "POST" })
   });
 
 export const listReworks = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
@@ -291,7 +291,7 @@ export const listReworks = createServerFn({ method: "POST" })
   });
 
 export const saveRework = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) =>
     z
       .object({
@@ -320,7 +320,7 @@ export const saveRework = createServerFn({ method: "POST" })
   });
 
 export const updateRework = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) =>
     z
       .object({
@@ -351,7 +351,7 @@ export const updateRework = createServerFn({ method: "POST" })
   });
 
 export const deleteRework = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([publicAccess])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("article_reworks").delete().eq("id", data.id);
