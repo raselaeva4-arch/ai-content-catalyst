@@ -128,44 +128,4 @@ function RootComponent() {
   );
 }
 
-
-function AuthGate({ children }: { children: React.ReactNode }) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const queryClient = useQueryClient();
-  const [checked, setChecked] = useState(false);
-  const [hasSession, setHasSession] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setHasSession(!!data.session);
-      setChecked(true);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      setHasSession(!!session);
-      setChecked(true);
-      queryClient.invalidateQueries();
-    });
-    return () => { mounted = false; subscription.unsubscribe(); };
-  }, [queryClient]);
-
-  useEffect(() => {
-    if (!checked) return;
-    const onAuth = location.pathname === "/auth";
-    // Preserve the full path (including the consent authorization_id) so the
-    // OAuth consent flow returns the user to the same URL after sign-in.
-    const isConsent = location.pathname.startsWith("/.lovable/oauth/consent");
-    if (!hasSession && !onAuth) {
-      if (isConsent) return; // consent route handles its own redirect with `next`
-      navigate({ to: "/auth", search: { next: undefined }, replace: true });
-    }
-    if (hasSession && onAuth) navigate({ to: "/", replace: true });
-  }, [checked, hasSession, location.pathname, navigate]);
-
-  if (!checked) {
-    return <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground text-sm">Loading…</div>;
-  }
-  return <>{children}</>;
 }
