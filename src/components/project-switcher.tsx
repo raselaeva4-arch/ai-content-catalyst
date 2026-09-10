@@ -61,9 +61,6 @@ export function ProjectSwitcher() {
     return () => { supabase.removeChannel(channel); };
   }, [listFn]);
 
-  async function signOut() {
-    await supabase.auth.signOut();
-  }
 
   if (!mounted) return null;
 

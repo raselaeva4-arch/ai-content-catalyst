@@ -45,8 +45,6 @@ export function PortalSidebar({ children }: { children: React.ReactNode }) {
     if (hidden) return;
     let active = true;
     void (async () => {
-      const { data: sess } = await supabase.auth.getSession();
-      if (!sess.session) return;
       const { data } = await supabase
         .from("portal_tools")
         .select("id,name,slug,url,open_in_new_tab")

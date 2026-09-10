@@ -121,14 +121,13 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthGate>
-        <PortalSidebar>
-          <Outlet />
-        </PortalSidebar>
-      </AuthGate>
+      <PortalSidebar>
+        <Outlet />
+      </PortalSidebar>
     </QueryClientProvider>
   );
 }
+
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
