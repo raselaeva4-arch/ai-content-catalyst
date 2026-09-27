@@ -126,7 +126,7 @@ function HistoryPage() {
               key={item.id}
               item={item}
               editing={editingId === item.id}
-              onEdit={() => setEditingId(item.id)}
+              onEdit={() => window.location.assign(`/?edit=${encodeURIComponent(item.id)}`)}
               onCancel={() => setEditingId(null)}
               onSave={async (patch) => {
                 try {
@@ -233,7 +233,7 @@ function HistoryCard({ item, editing, onEdit, onCancel, onSave, onDelete }: {
           <Link to="/history/$id" params={{ id: item.id }}>
             <Button variant="ghost" size="icon" title="Lihat detail"><Eye className="size-4" /></Button>
           </Link>
-          <Button variant="ghost" size="icon" onClick={onEdit}><Pencil className="size-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={onEdit} title="Buka di Keyword Explorer"><Pencil className="size-4" /></Button>
           <Button variant="ghost" size="icon" onClick={onDelete}><Trash2 className="size-4 text-destructive" /></Button>
         </div>
       </div>
