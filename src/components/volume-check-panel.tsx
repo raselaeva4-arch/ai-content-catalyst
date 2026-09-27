@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { checkVolume, listVolumeChecks, type VolumeRow } from "@/lib/volume.functions";
 
-type Props = { projectId: string; keywords: string[]; onResults?: (rows: VolumeRow[]) => void };
+type Props = { projectId: string; keywords: string[]; onResults?: (rows: VolumeRow[], geo: string) => void };
 
 const fmt = (n: number | null) => (n === null ? "—" : n.toLocaleString("id-ID"));
 
@@ -42,7 +42,7 @@ export function VolumeCheckPanel({ projectId, keywords, onResults }: Props) {
     try {
       const r = await run({ data: { project_id: projectId, keywords: kws, mode, maxIdeas, geo, language, network, aiVolume, includeAdultKeywords: adult } });
       setRows(r.results);
-      onResults?.(r.results);
+      onResults?.(r.results, geo);
       toast.success(`${r.results.length} keyword berhasil dicek`);
       loadHistory();
     } catch (e) {
@@ -152,7 +152,7 @@ export function VolumeCheckPanel({ projectId, keywords, onResults }: Props) {
               <li key={h.id} className="flex items-center justify-between gap-2 rounded border bg-card px-2 py-1.5">
                 <span className="truncate">{new Date(h.created_at).toLocaleString("id-ID")} · {(h.keywords as string[]).length} kw · {h.settings?.geo || "global"}</span>
                 {h.status === "done" ? (
-                  <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => { setRows(h.results); onResults?.(h.results); }}>Lihat</Button>
+                  <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => { setRows(h.results); onResults?.(h.results, String(h.settings?.geo ?? "")); }}>Lihat</Button>
                 ) : <Badge variant="outline" className="text-[10px]">{h.status}</Badge>}
               </li>
             ))}
