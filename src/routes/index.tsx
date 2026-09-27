@@ -17,7 +17,7 @@ import { listKb, saveKb, deleteKb, saveKbFile } from "@/lib/kb.functions";
 import { transcribeMedia } from "@/lib/transcribe.functions";
 import { transcribeUrl } from "@/lib/transcribe-url.functions";
 import { saveHistory } from "@/lib/history.functions";
-import { createTranscript } from "@/lib/transcripts.functions";
+import { createTranscript, listTranscripts } from "@/lib/transcripts.functions";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { ProjectSwitcher } from "@/components/project-switcher";
 
@@ -54,6 +54,7 @@ function Dashboard() {
   const transcribeUrlFn = useServerFn(transcribeUrl);
   const saveFn = useServerFn(saveHistory);
   const createTranscriptFn = useServerFn(createTranscript);
+  const listTranscriptsFn = useServerFn(listTranscripts);
 
   useEffect(() => {
     let cancelled = false;
