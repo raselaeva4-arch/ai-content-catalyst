@@ -17,7 +17,7 @@ import { listKb, saveKb, deleteKb, saveKbFile } from "@/lib/kb.functions";
 import { transcribeMedia } from "@/lib/transcribe.functions";
 import { transcribeUrl } from "@/lib/transcribe-url.functions";
 import { saveHistory } from "@/lib/history.functions";
-import { createTranscript } from "@/lib/transcripts.functions";
+import { createTranscript, listTranscripts } from "@/lib/transcripts.functions";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { ProjectSwitcher } from "@/components/project-switcher";
 
@@ -54,6 +54,7 @@ function Dashboard() {
   const transcribeUrlFn = useServerFn(transcribeUrl);
   const saveFn = useServerFn(saveHistory);
   const createTranscriptFn = useServerFn(createTranscript);
+  const listTranscriptsFn = useServerFn(listTranscripts);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +88,19 @@ function Dashboard() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [trendData, setTrendData] = useState<TrendRow[] | null>(null);
   const [loadingTrends, setLoadingTrends] = useState(false);
+  const [savedTranscripts, setSavedTranscripts] = useState<{ id: string; title: string; transcript: string; platform: string | null; created_at: string }[]>([]);
+  const [loadingTranscripts, setLoadingTranscripts] = useState(false);
+  const [transcriptsLoaded, setTranscriptsLoaded] = useState(false);
+
+  const loadSavedTranscripts = useCallback(async () => {
+    setLoadingTranscripts(true);
+    try {
+      const res = await listTranscriptsFn({ data: { project_id: projectId } });
+      setSavedTranscripts(res.items as any);
+      setTranscriptsLoaded(true);
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setLoadingTranscripts(false); }
+  }, [listTranscriptsFn, projectId]);
 
   const saveFileTranscript = useCallback(async (path: string) => {
     const target = files.find((f) => f.path === path) ?? null;
@@ -346,12 +360,15 @@ function Dashboard() {
             </div>
 
             <Tabs defaultValue="urls">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="urls"><Link2 className="size-3.5 mr-1.5" />Links</TabsTrigger>
                 <TabsTrigger value="reel"><Video className="size-3.5 mr-1.5" />Reel/TikTok</TabsTrigger>
                 <TabsTrigger value="record"><Mic className="size-3.5 mr-1.5" />Record</TabsTrigger>
                 <TabsTrigger value="files"><Upload className="size-3.5 mr-1.5" />Files</TabsTrigger>
                 <TabsTrigger value="notes"><FileText className="size-3.5 mr-1.5" />Notes</TabsTrigger>
+                <TabsTrigger value="transcripts" onClick={() => { if (!transcriptsLoaded && !loadingTranscripts) void loadSavedTranscripts(); }}>
+                  <History className="size-3.5 mr-1.5" />Transkrip
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="urls" className="space-y-2 mt-4">
@@ -510,6 +527,61 @@ function Dashboard() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
+              </TabsContent>
+
+              <TabsContent value="transcripts" className="mt-4 space-y-3">
+                <div className="rounded-lg border bg-accent/20 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <History className="size-4 text-primary" />
+                    <p className="text-sm font-medium">Ambil dari Riwayat Transkrip</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Pilih transkrip yang sudah tersimpan di halaman <Link to="/transcripts" className="text-primary hover:underline">Transcripts</Link>. Isinya akan dimasukkan ke Notes dan ikut dianalisis.
+                  </p>
+                </div>
+                <div className="flex justify-end">
+                  <Button variant="outline" size="sm" onClick={loadSavedTranscripts} disabled={loadingTranscripts}>
+                    {loadingTranscripts ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="size-3.5 mr-1.5" />}
+                    Muat Ulang
+                  </Button>
+                </div>
+                {loadingTranscripts && savedTranscripts.length === 0 ? (
+                  <div className="p-8 text-center"><Loader2 className="size-5 mx-auto animate-spin text-muted-foreground" /></div>
+                ) : savedTranscripts.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-6 text-center">
+                    <Mic className="size-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Belum ada transkrip tersimpan di project ini.</p>
+                    <Link to="/transcripts"><Button variant="link" size="sm">Buka halaman Transcripts</Button></Link>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                    {savedTranscripts.map((t) => (
+                      <div key={t.id} className="bg-muted/50 rounded-md px-3 py-2 text-sm flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <Mic className="size-3.5 shrink-0 text-primary" />
+                            <span className="truncate font-medium">{t.title}</span>
+                            {t.platform && <Badge variant="outline" className="text-[10px] capitalize">{t.platform}</Badge>}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {new Date(t.created_at).toLocaleString("id-ID")} · {t.transcript.length} chars
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs shrink-0"
+                          onClick={() => {
+                            setNotes((prev) => (prev.trim() ? `${prev.trim()}\n\n${t.transcript}` : t.transcript));
+                            toast.success(`Transkrip "${t.title}" ditambahkan ke Notes.`);
+                          }}
+                        >
+                          <Plus className="size-3 mr-1" />Pakai
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
 
