@@ -699,7 +699,7 @@ function Dashboard() {
             </Button>
           </Card>
 
-          {result && <ResultsPanel result={result} trends={trendData} loadingTrends={loadingTrends} projectId={projectId} onSave={onSave} saving={saving} savedId={savedId} />}
+          {result && <ResultsPanel result={result} trends={trendData} loadingTrends={loadingTrends} projectId={projectId} onSave={onSave} saving={saving} savedId={savedId} editId={editId} />}
         </div>
 
         {/* Right: Knowledge Base */}
@@ -727,7 +727,7 @@ function Dashboard() {
   );
 }
 
-function ResultsPanel({ result, trends, loadingTrends, projectId, onSave, saving, savedId }: { result: AnalysisResult; trends: TrendRow[] | null; loadingTrends: boolean; projectId: string; onSave: () => Promise<void>; saving: boolean; savedId: string | null }) {
+function ResultsPanel({ result, trends, loadingTrends, projectId, onSave, saving, savedId, editId }: { result: AnalysisResult; trends: TrendRow[] | null; loadingTrends: boolean; projectId: string; onSave: () => Promise<void>; saving: boolean; savedId: string | null }) {
   const [volumeByGeo, setVolumeByGeo] = useState<Record<string, VolumeRow[]>>({});
   const volumeFor = (geo: string, kw: string) => {
     const rows = volumeByGeo[geo] ?? [];
@@ -750,8 +750,8 @@ function ResultsPanel({ result, trends, loadingTrends, projectId, onSave, saving
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Badge style={{ background: "var(--gradient-brand)", color: "white" }}>{result.category}</Badge>
-          <Button size="sm" onClick={onSave} disabled={saving || !!savedId} variant={savedId ? "secondary" : "default"}>
-            {saving ? <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Menyimpan...</> : savedId ? <><CheckCircle2 className="size-3.5 mr-1.5" />Tersimpan</> : <><Save className="size-3.5 mr-1.5" />Simpan</>}
+          <Button size="sm" onClick={onSave} disabled={saving || (!!savedId && !editId)} variant={savedId && !editId ? "secondary" : "default"}>
+            {saving ? <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Menyimpan...</> : editId ? <><Save className="size-3.5 mr-1.5" />Simpan Perubahan</> : savedId ? <><CheckCircle2 className="size-3.5 mr-1.5" />Tersimpan</> : <><Save className="size-3.5 mr-1.5" />Simpan</>}
           </Button>
         </div>
       </div>
