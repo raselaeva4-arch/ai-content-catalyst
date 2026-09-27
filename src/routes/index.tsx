@@ -42,6 +42,14 @@ type AnalysisResult = {
   extracted: { captions: string[]; hashtags: string[]; comments_themes: string[]; key_topics: string[] };
 };
 
+const getUploadOwnerId = async (): Promise<string> => {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) {
+    throw new Error("Silakan login terlebih dahulu untuk mengupload file.");
+  }
+  return data.user.id;
+};
+
 type KeywordSelection = {
   main: { keyword: string; rationale?: string; intent?: string; globalVolume?: number | null; indonesiaVolume?: number | null; selected?: boolean }[];
   secondary: { keyword: string; globalVolume?: number | null; indonesiaVolume?: number | null; selected?: boolean }[];
@@ -246,13 +254,14 @@ function Dashboard() {
     if (!fileList?.length) return;
     setUploading(true);
     try {
+      const ownerId = await getUploadOwnerId();
       const uploaded: typeof files = [];
       for (const f of Array.from(fileList)) {
         if (f.size > 20 * 1024 * 1024) {
           toast.error(`${f.name} terlalu besar (max 20MB)`);
           continue;
         }
-        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}-${f.name}`;
+        const path = `${ownerId}/${Date.now()}-${Math.random().toString(36).slice(2)}-${f.name}`;
         const { error } = await supabase.storage.from("uploads").upload(path, f);
         if (error) { toast.error(`Gagal upload ${f.name}: ${error.message}`); continue; }
         const mime = f.type || "application/octet-stream";
@@ -309,9 +318,10 @@ function Dashboard() {
         if (blob.size > 20 * 1024 * 1024) { toast.error("Rekaman terlalu besar (max 20MB)."); return; }
         setRecProcessing(true);
         try {
+          const ownerId = await getUploadOwnerId();
           const ext = blobMime.includes("mp4") ? "m4a" : blobMime.includes("ogg") ? "ogg" : "webm";
           const name = `recording-${new Date().toISOString().replace(/[:.]/g, "-")}.${ext}`;
-          const path = `${Date.now()}-${Math.random().toString(36).slice(2)}-${name}`;
+          const path = `${ownerId}/${Date.now()}-${Math.random().toString(36).slice(2)}-${name}`;
           const { error } = await supabase.storage.from("uploads").upload(path, blob, { contentType: blobMime });
           if (error) throw new Error(error.message);
           setFiles((prev) => [...prev, { path, name, mime: blobMime, transcribing: true }]);
