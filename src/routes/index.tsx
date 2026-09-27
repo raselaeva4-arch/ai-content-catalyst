@@ -1105,9 +1105,10 @@ function KnowledgeBasePanel({ projectId, items, onSave, onSaveFile, onDelete }: 
     if (!fileList?.length) return;
     setUploadingKb(true);
     try {
+      const ownerId = await getUploadOwnerId();
       for (const f of Array.from(fileList)) {
         if (f.size > 20 * 1024 * 1024) { toast.error(`${f.name} > 20MB`); continue; }
-        const path = `kb/${projectId}/${Date.now()}-${Math.random().toString(36).slice(2)}-${f.name}`;
+        const path = `${ownerId}/kb/${projectId}/${Date.now()}-${Math.random().toString(36).slice(2)}-${f.name}`;
         const { error } = await supabase.storage.from("uploads").upload(path, f);
         if (error) { toast.error(`Upload ${f.name} gagal: ${error.message}`); continue; }
         toast.info(`Mengekstrak "${f.name}" dengan AI...`);
