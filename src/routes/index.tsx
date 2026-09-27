@@ -727,7 +727,7 @@ function Dashboard() {
   );
 }
 
-function ResultsPanel({ result, trends, loadingTrends, projectId, onSave, saving, savedId, editId }: { result: AnalysisResult; trends: TrendRow[] | null; loadingTrends: boolean; projectId: string; onSave: () => Promise<void>; saving: boolean; savedId: string | null }) {
+function ResultsPanel({ result, trends, loadingTrends, projectId, onSave, saving, savedId, editId }: { result: AnalysisResult; trends: TrendRow[] | null; loadingTrends: boolean; projectId: string; onSave: () => Promise<void>; saving: boolean; savedId: string | null; editId?: string | null }) {
   const [volumeByGeo, setVolumeByGeo] = useState<Record<string, VolumeRow[]>>({});
   const volumeFor = (geo: string, kw: string) => {
     const rows = volumeByGeo[geo] ?? [];
