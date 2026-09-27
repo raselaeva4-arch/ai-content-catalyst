@@ -736,13 +736,14 @@ function Dashboard() {
               setSavedId(null);
               toast.success("Draft manual dibuat. Pilih keyword, volume, dan judul lalu simpan.");
             }}
+            onResultChange={setResult}
             onSave={onSave}
             saving={saving}
             savedId={savedId}
             editId={editId}
             projectId={projectId}
           />
-          {result && <ResultsPanel result={result} trends={trendData} loadingTrends={loadingTrends} projectId={projectId} onSave={onSave} saving={saving} savedId={savedId} editId={editId} />}
+
         </div>
 
         {/* Right: Knowledge Base */}
@@ -775,6 +776,7 @@ function KeywordSelectionPanel({
   selection,
   onChange,
   onCreateManual,
+  onResultChange,
   onSave,
   saving,
   savedId,
@@ -785,6 +787,7 @@ function KeywordSelectionPanel({
   selection: KeywordSelection;
   onChange: (next: KeywordSelection) => void;
   onCreateManual: (result: AnalysisResult) => void;
+  onResultChange: (result: AnalysisResult) => void;
   onSave: () => Promise<void>;
   saving: boolean;
   savedId: string | null;
@@ -854,7 +857,7 @@ function KeywordSelectionPanel({
     const next = result?.article_titles ? [...result.article_titles, t] : [t];
     if (result) {
       const updated = { ...result, article_titles: next };
-      onCreateManual(updated);
+      onResultChange(updated);
     }
     onChange({ ...selection, selectedTitle: t });
     setTitleText("");
@@ -862,6 +865,21 @@ function KeywordSelectionPanel({
 
   return (
     <Card className="p-5 shadow-[var(--shadow-card)] space-y-5">
+      {result && (
+        <div className="rounded-lg border bg-muted/30 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Tag className="size-4 text-primary" />
+                <span className="font-semibold">{result.category}</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">{result.summary}</p>
+            </div>
+            <Badge variant="outline">Editable</Badge>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-semibold">Pilih Keyword & Judul</h2>
@@ -935,7 +953,7 @@ function KeywordSelectionPanel({
             <Input value={title} onChange={(e) => {
               const nextTitles = [...result.article_titles];
               nextTitles[i] = e.target.value;
-              onCreateManual({ ...result, article_titles: nextTitles });
+              onResultChange({ ...result, article_titles: nextTitles });
               onChange({ ...selection, selectedTitle: selection.selectedTitle === title ? e.target.value : selection.selectedTitle });
             }} />
           </div>
