@@ -28,12 +28,25 @@ export function VolumeCheckPanel({ projectId, keywords, onResults }: Props) {
   const [rows, setRows] = useState<VolumeRow[] | null>(null);
   const [history, setHistory] = useState<any[]>([]);
 
-  useEffect(() => setKwText(keywords.join("\n")), [keywords.join("|")]);
+  useEffect(() => {
+    setKwText((prev) => {
+      const current = prev.split("\n").map((s) => s.trim()).filter(Boolean);
+      if (!current.length || current.every((k) => keywords.includes(k))) return keywords.join("\n");
+      return prev;
+    });
+  }, [keywords]);
 
   const loadHistory = async () => {
     try { setHistory((await list({ data: { project_id: projectId } })).items); } catch { /* ignore */ }
   };
   useEffect(() => { loadHistory(); }, [projectId]);
+
+  const applyHistory = (h: any) => {
+    const nextRows = Array.isArray(h.results) ? h.results as VolumeRow[] : [];
+    setRows(nextRows);
+    onResults?.(nextRows, String(h.settings?.geo ?? ""));
+    if (h.settings?.geo !== undefined) setGeo(String(h.settings.geo));
+  };
 
   const onRun = async () => {
     const kws = kwText.split("\n").map((s) => s.trim()).filter(Boolean);
@@ -152,7 +165,7 @@ export function VolumeCheckPanel({ projectId, keywords, onResults }: Props) {
               <li key={h.id} className="flex items-center justify-between gap-2 rounded border bg-card px-2 py-1.5">
                 <span className="truncate">{new Date(h.created_at).toLocaleString("id-ID")} · {(h.keywords as string[]).length} kw · {h.settings?.geo || "global"}</span>
                 {h.status === "done" ? (
-                  <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => { setRows(h.results); onResults?.(h.results, String(h.settings?.geo ?? "")); }}>Lihat</Button>
+                  <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => applyHistory(h)}>Lihat</Button>
                 ) : <Badge variant="outline" className="text-[10px]">{h.status}</Badge>}
               </li>
             ))}
