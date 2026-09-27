@@ -26,7 +26,6 @@ export type VolumeRow = {
   competitionIndex: number | null;
   aiVolume: number | null;
   trend: number[];
-  raw: Record<string, unknown>;
 };
 
 function num(v: unknown): number | null {
@@ -54,7 +53,6 @@ function normalize(item: Record<string, any>): VolumeRow {
     competitionIndex: num(pick(item, ["competitionIndex", "competition_index"])),
     aiVolume: num(typeof ai === "object" && ai ? pick(ai, ["volume", "current", "value"]) : ai),
     trend,
-    raw: item,
   };
 }
 
@@ -68,7 +66,7 @@ export const checkVolume = createServerFn({ method: "POST" })
     if (!apifyKey) throw new Error("Koneksi Apify belum tersambung");
 
     const keywords = Array.from(new Set(data.keywords.map((k) => k.toLowerCase())));
-    const input: Record<string, unknown> = {
+    const input: Record<string, string | number | boolean | string[]> = {
       keywords,
       mode: data.mode,
       network: data.network,
@@ -79,7 +77,7 @@ export const checkVolume = createServerFn({ method: "POST" })
     if (data.geo) input.geo = data.geo;
     if (data.language) input.language = data.language;
 
-    const settings = { ...input };
+    const settings: Record<string, string | number | boolean> = { ...(input as any) };
     delete (settings as any).keywords;
 
     const { data: row } = await context.supabase
