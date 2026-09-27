@@ -16,7 +16,7 @@ import { getTrends } from "@/lib/trends.functions";
 import { listKb, saveKb, deleteKb, saveKbFile } from "@/lib/kb.functions";
 import { transcribeMedia } from "@/lib/transcribe.functions";
 import { transcribeUrl } from "@/lib/transcribe-url.functions";
-import { saveHistory } from "@/lib/history.functions";
+import { getHistoryById, saveHistory, updateHistory } from "@/lib/history.functions";
 import { createTranscript, listTranscripts } from "@/lib/transcripts.functions";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { ProjectSwitcher } from "@/components/project-switcher";
@@ -55,6 +55,8 @@ function Dashboard() {
   const transcribeFn = useServerFn(transcribeMedia);
   const transcribeUrlFn = useServerFn(transcribeUrl);
   const saveFn = useServerFn(saveHistory);
+  const getHistoryFn = useServerFn(getHistoryById);
+  const updateHistoryFn = useServerFn(updateHistory);
   const createTranscriptFn = useServerFn(createTranscript);
   const listTranscriptsFn = useServerFn(listTranscripts);
 
@@ -68,6 +70,8 @@ function Dashboard() {
 
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [loadingEdit, setLoadingEdit] = useState(false);
   const [reelUrl, setReelUrl] = useState("");
   const [reelLoading, setReelLoading] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -84,7 +88,7 @@ function Dashboard() {
 
   const [urls, setUrls] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
-  const [files, setFiles] = useState<{ path: string; name: string; mime: string; transcript?: string; editedTranscript?: string; transcribing?: boolean; transcriptId?: string; saving?: boolean }[]>([]);
+  const [files, setFiles] = useState<{ path: string; name: string; mime: string; transcript?: string; editedTranscript?: string; transcribing?: boolean; transcriptId?: string; saving?: boolean; restoredOnly?: boolean }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -93,6 +97,83 @@ function Dashboard() {
   const [savedTranscripts, setSavedTranscripts] = useState<{ id: string; title: string; transcript: string; platform: string | null; created_at: string }[]>([]);
   const [loadingTranscripts, setLoadingTranscripts] = useState(false);
   const [transcriptsLoaded, setTranscriptsLoaded] = useState(false);
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("edit");
+    if (!id || id === editId) return;
+
+    setEditId(id);
+    setLoadingEdit(true);
+    getHistoryFn({ data: { id } })
+      .then((res) => {
+        const item = res.item as any;
+        const sources = item.source_inputs ?? {};
+        const restoredMain = Array.isArray(item.main_keywords)
+          ? item.main_keywords.map((k: any) =>
+              typeof k === "string"
+                ? { keyword: k, rationale: "", intent: "informational" }
+                : k
+            )
+          : [];
+        const restoredExtracted = item.extracted ?? {};
+
+        setResult({
+          summary: item.summary ?? "",
+          category: item.category ?? "General",
+          main_keywords: restoredMain,
+          secondary_keywords: Array.isArray(item.secondary_keywords) ? item.secondary_keywords.map(String) : [],
+          article_titles: Array.isArray(item.article_titles) ? item.article_titles.map(String) : [],
+          extracted: {
+            captions: Array.isArray(restoredExtracted.captions) ? restoredExtracted.captions : [],
+            hashtags: Array.isArray(restoredExtracted.hashtags) ? restoredExtracted.hashtags : [],
+            comments_themes: Array.isArray(restoredExtracted.comments_themes) ? restoredExtracted.comments_themes : [],
+            key_topics: Array.isArray(restoredExtracted.key_topics) ? restoredExtracted.key_topics : [],
+          },
+        });
+        setNotes(item.notes ?? "");
+        setUrls(
+          Array.isArray(sources.urls) && sources.urls.length
+            ? sources.urls.map(String)
+            : [""]
+        );
+
+        const restoredFiles = Array.isArray(sources.files)
+          ? sources.files.map((f: any) =>
+              typeof f === "string"
+                ? {
+                    path: "",
+                    name: f,
+                    mime: "application/octet-stream",
+                    restoredOnly: true,
+                  }
+                : {
+                    path: String(f.path ?? ""),
+                    name: String(f.name ?? "Restored file"),
+                    mime: String(f.mime ?? "application/octet-stream"),
+                    transcript: typeof f.transcript === "string" ? f.transcript : undefined,
+                    editedTranscript: typeof f.editedTranscript === "string" ? f.editedTranscript : undefined,
+                    restoredOnly: false,
+                  }
+            )
+          : [];
+        setFiles(restoredFiles);
+        setTrendData(null);
+        setSavedId(item.id);
+
+        const mainKeywords = restoredMain.map((k: any) => k.keyword).filter(Boolean);
+        if (mainKeywords.length) {
+          setLoadingTrends(true);
+          void trends({ data: { keywords: mainKeywords } })
+            .then((t) => setTrendData(t.trends))
+            .catch(() => toast.warning("Google Trends tidak tersedia saat ini."))
+            .finally(() => setLoadingTrends(false));
+        }
+
+        toast.success("History dimuat ke Keyword Explorer. Anda bisa melanjutkan edit dan Analyze.");
+      })
+      .catch((e) => toast.error("Gagal membuka history: " + (e as Error).message))
+      .finally(() => setLoadingEdit(false));
+  }, [editId, getHistoryFn, trends]);
 
   const loadSavedTranscripts = useCallback(async () => {
     setLoadingTranscripts(true);
@@ -278,7 +359,9 @@ function Dashboard() {
         .map((f) => `=== TRANSKRIP ${f.name} ===\n${f.editedTranscript ?? f.transcript}`)
         .join("\n\n");
       const mergedNotes = [notes.trim(), transcriptBlock].filter(Boolean).join("\n\n");
-      const payloadFiles = files.filter((f) => !f.path.startsWith("url:")).map(({ path, name, mime }) => ({ path, name, mime }));
+      const payloadFiles = files
+        .filter((f) => !f.restoredOnly && f.path && !f.path.startsWith("url:"))
+        .map(({ path, name, mime }) => ({ path, name, mime }));
       const res = await analyze({ data: { project_id: projectId, urls: cleanUrls, files: payloadFiles, notes: mergedNotes } });
       setResult(res.result);
       toast.success("Analisis selesai!");
@@ -299,7 +382,18 @@ function Dashboard() {
     setSaving(true);
     try {
       const cleanUrls = urls.map((u) => u.trim()).filter(Boolean);
-      const res = await saveFn({ data: {
+      const sourceInputs = {
+        urls: cleanUrls,
+        files: files.map(({ path, name, mime, transcript, editedTranscript }) => ({
+          path,
+          name,
+          mime,
+          ...(transcript ? { transcript } : {}),
+          ...(editedTranscript !== undefined ? { editedTranscript } : {}),
+        })),
+      };
+
+      const payload = {
         project_id: projectId,
         title: result.article_titles[0] ?? result.summary.slice(0, 80) ?? "Untitled",
         category: result.category,
@@ -309,14 +403,22 @@ function Dashboard() {
         article_titles: result.article_titles,
         extracted: result.extracted,
         notes: notes || null,
-        source_inputs: { urls: cleanUrls, files: files.map((f) => f.name) },
-      } });
-      setSavedId(res.item.id);
-      toast.success("Tersimpan ke History");
+        source_inputs: sourceInputs,
+      };
+
+      if (editId) {
+        await updateHistoryFn({ data: { id: editId, ...payload } });
+        setSavedId(editId);
+        toast.success("Perubahan history diperbarui");
+      } else {
+        const res = await saveFn({ data: payload });
+        setSavedId(res.item.id);
+        toast.success("Tersimpan ke History");
+      }
     } catch (e) {
       toast.error((e as Error).message);
     } finally { setSaving(false); }
-  }, [result, urls, files, notes, saveFn, projectId]);
+  }, [result, urls, files, notes, saveFn, updateHistoryFn, projectId, editId]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -335,6 +437,11 @@ function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {editId && (
+              <Button variant="ghost" size="sm" onClick={() => { window.history.replaceState({}, "", "/"); setEditId(null); setSavedId(null); }}>
+                <History className="size-3.5 mr-1.5" />Kembali dari Edit
+              </Button>
+            )}
             <ProjectSwitcher />
             <Link to="/articles">
               <Button variant="outline" size="sm"><FileText className="size-3.5 mr-1.5" />Artikel SEO</Button>
@@ -587,8 +694,8 @@ function Dashboard() {
               </TabsContent>
             </Tabs>
 
-            <Button className="w-full mt-5" size="lg" onClick={onAnalyze} disabled={analyzing || uploading}>
-              {analyzing ? <><Loader2 className="size-4 mr-2 animate-spin" />Menganalisis...</> : <><Sparkles className="size-4 mr-2" />Analyze dengan AI</>}
+            <Button className="w-full mt-5" size="lg" onClick={onAnalyze} disabled={analyzing || uploading || loadingEdit}>
+              {loadingEdit ? <><Loader2 className="size-4 mr-2 animate-spin" />Memuat History...</> : analyzing ? <><Loader2 className="size-4 mr-2 animate-spin" />Menganalisis...</> : <><Sparkles className="size-4 mr-2" />Analyze dengan AI</>}
             </Button>
           </Card>
 
