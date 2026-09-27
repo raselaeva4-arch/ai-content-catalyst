@@ -248,6 +248,47 @@ export type Database = {
           },
         ]
       }
+      keyword_volume_checks: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          keywords: Json
+          project_id: string
+          results: Json
+          settings: Json
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          keywords?: Json
+          project_id: string
+          results?: Json
+          settings?: Json
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          keywords?: Json
+          project_id?: string
+          results?: Json
+          settings?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "keyword_volume_checks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base: {
         Row: {
           content: string
