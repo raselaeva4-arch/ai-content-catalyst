@@ -12,7 +12,7 @@ import {
   Sparkles,
   Menu,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { listPortalTools } from "@/lib/tools.functions";
 import { cn } from "@/lib/utils";
 
 type Tool = {
@@ -45,12 +45,12 @@ export function PortalSidebar({ children }: { children: React.ReactNode }) {
     if (hidden) return;
     let active = true;
     void (async () => {
-      const { data } = await supabase
-        .from("portal_tools")
-        .select("id,name,slug,url,open_in_new_tab")
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: true });
-      if (active && data) setTools(data as Tool[]);
+      try {
+        const res = await listPortalTools();
+        if (active) setTools(res.items as Tool[]);
+      } catch {
+        /* ignore */
+      }
     })();
     return () => {
       active = false;
