@@ -621,11 +621,12 @@ function Dashboard() {
 }
 
 function ResultsPanel({ result, trends, loadingTrends, projectId, onSave, saving, savedId }: { result: AnalysisResult; trends: TrendRow[] | null; loadingTrends: boolean; projectId: string; onSave: () => Promise<void>; saving: boolean; savedId: string | null }) {
-  const [volumeRows, setVolumeRows] = useState<VolumeRow[]>([]);
-  const [volumeGeo, setVolumeGeo] = useState("id");
-  const volumeFor = (kw: string) => volumeRows.find((r) => r.keyword.trim().toLowerCase() === kw.trim().toLowerCase());
+  const [volumeByGeo, setVolumeByGeo] = useState<Record<string, VolumeRow[]>>({});
+  const volumeFor = (geo: string, kw: string) => (volumeByGeo[geo] ?? []).find((r) => r.keyword.trim().toLowerCase() === kw.trim().toLowerCase());
   const allKeywords = Array.from(new Set([...result.main_keywords.map((k) => k.keyword), ...result.secondary_keywords]));
-  const handleVolumeResults = useCallback((rows: VolumeRow[], geo: string) => { setVolumeRows(rows); setVolumeGeo(geo || ""); }, []);
+  const handleVolumeResults = useCallback((rows: VolumeRow[], geo: string) => {
+    setVolumeByGeo((prev) => ({ ...prev, [geo || "global"]: rows }));
+  }, []);
   const trendFor = (kw: string) => trends?.find((t) => t.keyword === kw);
   return (
     <Card className="p-6 shadow-[var(--shadow-elevated)] space-y-6">
@@ -660,8 +661,8 @@ function ResultsPanel({ result, trends, loadingTrends, projectId, onSave, saving
                   <Badge variant="outline" className="text-xs">{k.intent}</Badge>
                 </div>
                 <div className="flex gap-3 mt-2.5 text-xs">
-                  <TrendStat label="Global" value={loadingTrends ? null : t?.global ?? null} />
-                  <TrendStat label="Indonesia" value={volumeGeo === "id" ? volumeFor(k.keyword)?.volume ?? null : (loadingTrends ? null : t?.indonesia ?? null)} />
+                  <VolumeStat label="Global" value={volumeFor("", k.keyword)?.volume ?? null} />
+                  <VolumeStat label="Indonesia" value={volumeFor("id", k.keyword)?.volume ?? null} />
                   {loadingTrends && <Loader2 className="size-3 animate-spin text-muted-foreground" />}
                 </div>
               </div>
@@ -707,12 +708,12 @@ function ResultsPanel({ result, trends, loadingTrends, projectId, onSave, saving
   );
 }
 
-function TrendStat({ label, value }: { label: string; value: number | null }) {
+function VolumeStat({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="flex items-center gap-1.5">
       <span className="text-muted-foreground">{label}:</span>
       {value === null ? <span className="text-muted-foreground">—</span> : (
-        <span className="font-medium tabular-nums">{value}<span className="text-muted-foreground font-normal">/100</span></span>
+        <span className="font-medium tabular-nums">{value.toLocaleString("id-ID")}<span className="text-muted-foreground font-normal">/bln</span></span>
       )}
     </div>
   );
