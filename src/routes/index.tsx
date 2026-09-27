@@ -42,6 +42,12 @@ type AnalysisResult = {
   extracted: { captions: string[]; hashtags: string[]; comments_themes: string[]; key_topics: string[] };
 };
 
+type KeywordSelection = {
+  main: { keyword: string; rationale?: string; intent?: string; globalVolume?: number | null; indonesiaVolume?: number | null; selected?: boolean }[];
+  secondary: { keyword: string; globalVolume?: number | null; indonesiaVolume?: number | null; selected?: boolean }[];
+  selectedTitle: string;
+};
+
 type TrendRow = { keyword: string; global: number | null; indonesia: number | null };
 
 function Dashboard() {
@@ -93,6 +99,7 @@ function Dashboard() {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [trendData, setTrendData] = useState<TrendRow[] | null>(null);
+  const [keywordSelection, setKeywordSelection] = useState<KeywordSelection>({ main: [], secondary: [], selectedTitle: "" });
   const [loadingTrends, setLoadingTrends] = useState(false);
   const [savedTranscripts, setSavedTranscripts] = useState<{ id: string; title: string; transcript: string; platform: string | null; created_at: string }[]>([]);
   const [loadingTranscripts, setLoadingTranscripts] = useState(false);
@@ -117,12 +124,15 @@ function Dashboard() {
           : [];
         const restoredExtracted = item.extracted ?? {};
 
+        const restoredSecondary = Array.isArray(item.secondary_keywords) ? item.secondary_keywords.map(String) : [];
+        const restoredTitles = Array.isArray(item.article_titles) ? item.article_titles.map(String) : [];
+        const savedSelection = sources.keyword_selection as KeywordSelection | undefined;
         setResult({
           summary: item.summary ?? "",
           category: item.category ?? "General",
           main_keywords: restoredMain,
-          secondary_keywords: Array.isArray(item.secondary_keywords) ? item.secondary_keywords.map(String) : [],
-          article_titles: Array.isArray(item.article_titles) ? item.article_titles.map(String) : [],
+          secondary_keywords: restoredSecondary,
+          article_titles: restoredTitles,
           extracted: {
             captions: Array.isArray(restoredExtracted.captions) ? restoredExtracted.captions : [],
             hashtags: Array.isArray(restoredExtracted.hashtags) ? restoredExtracted.hashtags : [],
@@ -130,6 +140,15 @@ function Dashboard() {
             key_topics: Array.isArray(restoredExtracted.key_topics) ? restoredExtracted.key_topics : [],
           },
         });
+        setKeywordSelection(
+          savedSelection?.main?.length || savedSelection?.secondary?.length || savedSelection?.selectedTitle
+            ? savedSelection
+            : {
+                main: restoredMain.map((k: any) => ({ keyword: String(k.keyword), rationale: String(k.rationale ?? ""), intent: String(k.intent ?? "informational"), selected: true })),
+                secondary: restoredSecondary.map((keyword) => ({ keyword, selected: true })),
+                selectedTitle: restoredTitles[0] ?? "",
+              }
+        );
         setNotes(item.notes ?? "");
         setUrls(
           Array.isArray(sources.urls) && sources.urls.length
@@ -364,6 +383,11 @@ function Dashboard() {
         .map(({ path, name, mime }) => ({ path, name, mime }));
       const res = await analyze({ data: { project_id: projectId, urls: cleanUrls, files: payloadFiles, notes: mergedNotes } });
       setResult(res.result);
+      setKeywordSelection({
+        main: res.result.main_keywords.map((k: any) => ({ keyword: String(k.keyword), rationale: String(k.rationale ?? ""), intent: String(k.intent ?? "informational"), selected: true })),
+        secondary: res.result.secondary_keywords.map((keyword: string) => ({ keyword, selected: true })),
+        selectedTitle: res.result.article_titles[0] ?? "",
+      });
       toast.success("Analisis selesai!");
       setLoadingTrends(true);
       try {
@@ -393,17 +417,21 @@ function Dashboard() {
         })),
       };
 
+      const selectedMain = keywordSelection.main.filter((k) => k.selected !== false && k.keyword.trim());
+      const selectedSecondary = keywordSelection.secondary.filter((k) => k.selected !== false && k.keyword.trim());
+      const selectedTitle = keywordSelection.selectedTitle.trim() || result.article_titles[0] || result.summary.slice(0, 80) || "Untitled";
+      const normalizedSelection = { main: keywordSelection.main, secondary: keywordSelection.secondary, selectedTitle };
       const payload = {
         project_id: projectId,
-        title: result.article_titles[0] ?? result.summary.slice(0, 80) ?? "Untitled",
+        title: selectedTitle,
         category: result.category,
         summary: result.summary,
-        main_keywords: result.main_keywords,
-        secondary_keywords: result.secondary_keywords,
-        article_titles: result.article_titles,
+        main_keywords: selectedMain.map(({ keyword, rationale, intent }) => ({ keyword, rationale: rationale ?? "", intent: intent ?? "informational" })),
+        secondary_keywords: selectedSecondary.map((k) => k.keyword),
+        article_titles: result.article_titles.length ? result.article_titles : [selectedTitle],
         extracted: result.extracted,
         notes: notes || null,
-        source_inputs: sourceInputs,
+        source_inputs: { ...sourceInputs, keyword_selection: normalizedSelection },
       };
 
       if (editId) {
@@ -418,7 +446,7 @@ function Dashboard() {
     } catch (e) {
       toast.error((e as Error).message);
     } finally { setSaving(false); }
-  }, [result, urls, files, notes, saveFn, updateHistoryFn, projectId, editId]);
+  }, [result, urls, files, notes, saveFn, updateHistoryFn, projectId, editId, keywordSelection]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -699,6 +727,21 @@ function Dashboard() {
             </Button>
           </Card>
 
+          <KeywordSelectionPanel
+            result={result}
+            selection={keywordSelection}
+            onChange={setKeywordSelection}
+            onCreateManual={(manual) => {
+              setResult(manual);
+              setSavedId(null);
+              toast.success("Draft manual dibuat. Pilih keyword, volume, dan judul lalu simpan.");
+            }}
+            onSave={onSave}
+            saving={saving}
+            savedId={savedId}
+            editId={editId}
+            projectId={projectId}
+          />
           {result && <ResultsPanel result={result} trends={trendData} loadingTrends={loadingTrends} projectId={projectId} onSave={onSave} saving={saving} savedId={savedId} editId={editId} />}
         </div>
 
@@ -724,6 +767,185 @@ function Dashboard() {
         />
       </main>
     </div>
+  );
+}
+
+function KeywordSelectionPanel({
+  result,
+  selection,
+  onChange,
+  onCreateManual,
+  onSave,
+  saving,
+  savedId,
+  editId,
+  projectId,
+}: {
+  result: AnalysisResult | null;
+  selection: KeywordSelection;
+  onChange: (next: KeywordSelection) => void;
+  onCreateManual: (result: AnalysisResult) => void;
+  onSave: () => Promise<void>;
+  saving: boolean;
+  savedId: string | null;
+  editId?: string | null;
+  projectId: string;
+}) {
+  const [mainText, setMainText] = useState("");
+  const [secondaryText, setSecondaryText] = useState("");
+  const [titleText, setTitleText] = useState("");
+
+  useEffect(() => {
+    if (result) return;
+    setMainText(selection.main.map((k) => k.keyword).join("\n"));
+    setSecondaryText(selection.secondary.map((k) => k.keyword).join("\n"));
+    setTitleText(selection.selectedTitle);
+  }, [result, selection.main, selection.secondary, selection.selectedTitle]);
+
+  const [volumeByGeo, setVolumeByGeo] = useState<Record<string, VolumeRow[]>>({});
+  const volumeFor = (geo: string, keyword: string) => {
+    const rows = volumeByGeo[geo] ?? [];
+    return rows.find((r) => r.keyword.trim().toLowerCase() === keyword.trim().toLowerCase());
+  };
+
+  const updateMain = (index: number, patch: Partial<KeywordSelection["main"][number]>) => {
+    onChange({ ...selection, main: selection.main.map((k, i) => i === index ? { ...k, ...patch } : k) });
+  };
+  const updateSecondary = (index: number, patch: Partial<KeywordSelection["secondary"][number]>) => {
+    onChange({ ...selection, secondary: selection.secondary.map((k, i) => i === index ? { ...k, ...patch } : k) });
+  };
+
+  const addMain = () => onChange({ ...selection, main: [...selection.main, { keyword: "", intent: "informational", rationale: "", selected: true }] });
+  const addSecondary = () => onChange({ ...selection, secondary: [...selection.secondary, { keyword: "", selected: true }] });
+
+  const runManual = () => {
+    const main = mainText.split("\n").map((s) => s.trim()).filter(Boolean).map((keyword) => ({ keyword, intent: "informational", rationale: "", selected: true }));
+    const secondary = secondaryText.split("\n").map((s) => s.trim()).filter(Boolean).map((keyword) => ({ keyword, selected: true }));
+    const selectedTitle = titleText.trim();
+    if (!main.length && !secondary.length && !selectedTitle) {
+      toast.error("Masukkan minimal 1 keyword atau judul.");
+      return;
+    }
+    onChange({ main, secondary, selectedTitle });
+    onCreateManual({
+      summary: "Draft manual — keyword dan judul dimasukkan oleh pengguna.",
+      category: "Manual",
+      main_keywords: main,
+      secondary_keywords: secondary.map((k) => k.keyword),
+      article_titles: selectedTitle ? [selectedTitle] : [],
+      extracted: { captions: [], hashtags: [], comments_themes: [], key_topics: [] },
+    });
+  };
+
+  const allKeywords = Array.from(new Set([...selection.main.map((k) => k.keyword), ...selection.secondary.map((k) => k.keyword)].filter(Boolean)));
+  const handleVolumeResults = useCallback((rows: VolumeRow[], geo: string) => {
+    setVolumeByGeo((prev) => ({ ...prev, [geo || "global"]: rows }));
+    const key = geo || "global";
+    onChange({
+      ...selection,
+      main: selection.main.map((k) => ({ ...k, ...(key === "id" ? { indonesiaVolume: rows.find((r) => r.keyword.trim().toLowerCase() === k.keyword.trim().toLowerCase())?.volume ?? null } : { globalVolume: rows.find((r) => r.keyword.trim().toLowerCase() === k.keyword.trim().toLowerCase())?.volume ?? null }) })),
+      secondary: selection.secondary.map((k) => ({ ...k, ...(key === "id" ? { indonesiaVolume: rows.find((r) => r.keyword.trim().toLowerCase() === k.keyword.trim().toLowerCase())?.volume ?? null } : { globalVolume: rows.find((r) => r.keyword.trim().toLowerCase() === k.keyword.trim().toLowerCase())?.volume ?? null }) })),
+    });
+  }, [selection, onChange]);
+
+  const addTitle = () => {
+    const t = titleText.trim();
+    if (!t) return;
+    const next = result?.article_titles ? [...result.article_titles, t] : [t];
+    if (result) {
+      const updated = { ...result, article_titles: next };
+      onCreateManual(updated);
+    }
+    onChange({ ...selection, selectedTitle: t });
+    setTitleText("");
+  };
+
+  return (
+    <Card className="p-5 shadow-[var(--shadow-card)] space-y-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">Pilih Keyword & Judul</h2>
+          <p className="text-xs text-muted-foreground mt-1">Centang keyword yang ingin dipakai. Edit keyword dan volume secara manual jika perlu. Data pilihan disimpan bersama History.</p>
+        </div>
+        <Button size="sm" onClick={onSave} disabled={saving || !result || (!selection.main.length && !selection.secondary.length && !selection.selectedTitle)}>
+          {saving ? <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Menyimpan...</> : editId ? "Simpan Perubahan" : savedId ? "Tersimpan" : "Simpan Pilihan"}
+        </Button>
+      </div>
+
+      {!result && (
+        <div className="rounded-lg border border-dashed p-4 space-y-3">
+          <div className="font-medium text-sm">Input Manual</div>
+          <Textarea rows={4} placeholder="Main Keyword — satu per baris" value={mainText} onChange={(e) => setMainText(e.target.value)} />
+          <Textarea rows={4} placeholder="Secondary Keyword — satu per baris" value={secondaryText} onChange={(e) => setSecondaryText(e.target.value)} />
+          <Input placeholder="Judul artikel pilihan" value={titleText} onChange={(e) => setTitleText(e.target.value)} />
+          <Button variant="outline" onClick={runManual}>Gunakan Keyword & Judul Manual</Button>
+        </div>
+      )}
+
+      {selection.main.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold">Main Keyword</h3>
+            <Button variant="ghost" size="sm" onClick={addMain}><Plus className="size-3.5 mr-1" />Tambah</Button>
+          </div>
+          <div className="space-y-2">
+            {selection.main.map((k, i) => (
+              <div key={i} className="grid grid-cols-[auto_minmax(0,1fr)_110px_110px_auto] gap-2 items-center rounded-lg border p-2">
+                <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateMain(i, { selected: e.target.checked })} className="size-4" aria-label={\`Pilih \${k.keyword || "main keyword"}\`} />
+                <Input value={k.keyword} placeholder="Main keyword" onChange={(e) => updateMain(i, { keyword: e.target.value })} />
+                <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global" inputMode="numeric" onChange={(e) => updateMain(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
+                <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia" inputMode="numeric" onChange={(e) => updateMain(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
+                <Button variant="ghost" size="icon" onClick={() => onChange({ ...selection, main: selection.main.filter((_, j) => j !== i) })}><Trash2 className="size-3.5" /></Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {selection.secondary.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold">Secondary Keyword</h3>
+            <Button variant="ghost" size="sm" onClick={addSecondary}><Plus className="size-3.5 mr-1" />Tambah</Button>
+          </div>
+          <div className="space-y-2">
+            {selection.secondary.map((k, i) => (
+              <div key={i} className="grid grid-cols-[auto_minmax(0,1fr)_110px_110px_auto] gap-2 items-center rounded-lg border p-2">
+                <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateSecondary(i, { selected: e.target.checked })} className="size-4" aria-label={\`Pilih \${k.keyword || "secondary keyword"}\`} />
+                <Input value={k.keyword} placeholder="Secondary keyword" onChange={(e) => updateSecondary(i, { keyword: e.target.value })} />
+                <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global" inputMode="numeric" onChange={(e) => updateSecondary(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
+                <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia" inputMode="numeric" onChange={(e) => updateSecondary(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
+                <Button variant="ghost" size="icon" onClick={() => onChange({ ...selection, secondary: selection.secondary.filter((_, j) => j !== i) })}><Trash2 className="size-3.5" /></Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <VolumeCheckPanel projectId={projectId} keywords={allKeywords} onResults={handleVolumeResults} />
+
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold">Judul Artikel</h3>
+          <span className="text-xs text-muted-foreground">Pilih satu judul utama dan edit langsung</span>
+        </div>
+        {result?.article_titles?.map((title, i) => (
+          <div key={i} className="flex items-center gap-2 mb-2">
+            <input type="radio" name="selected-title" checked={selection.selectedTitle === title} onChange={() => onChange({ ...selection, selectedTitle: title })} />
+            <Input value={title} onChange={(e) => {
+              const nextTitles = [...result.article_titles];
+              nextTitles[i] = e.target.value;
+              onCreateManual({ ...result, article_titles: nextTitles });
+              onChange({ ...selection, selectedTitle: selection.selectedTitle === title ? e.target.value : selection.selectedTitle });
+            }} />
+          </div>
+        ))}
+        <div className="flex gap-2 mt-2">
+          <Input placeholder="Tambah judul manual" value={titleText} onChange={(e) => setTitleText(e.target.value)} />
+          <Button variant="outline" onClick={addTitle}><Plus className="size-3.5 mr-1" />Tambah Judul</Button>
+        </div>
+      </section>
+    </Card>
   );
 }
 
