@@ -622,7 +622,10 @@ function Dashboard() {
 
 function ResultsPanel({ result, trends, loadingTrends, projectId, onSave, saving, savedId }: { result: AnalysisResult; trends: TrendRow[] | null; loadingTrends: boolean; projectId: string; onSave: () => Promise<void>; saving: boolean; savedId: string | null }) {
   const [volumeByGeo, setVolumeByGeo] = useState<Record<string, VolumeRow[]>>({});
-  const volumeFor = (geo: string, kw: string) => (volumeByGeo[geo] ?? []).find((r) => r.keyword.trim().toLowerCase() === kw.trim().toLowerCase());
+  const volumeFor = (geo: string, kw: string) => {
+    const rows = volumeByGeo[geo] ?? [];
+    return rows.find((r) => r.keyword.trim().toLowerCase() === kw.trim().toLowerCase());
+  };
   const allKeywords = Array.from(new Set([...result.main_keywords.map((k) => k.keyword), ...result.secondary_keywords]));
   const handleVolumeResults = useCallback((rows: VolumeRow[], geo: string) => {
     setVolumeByGeo((prev) => ({ ...prev, [geo || "global"]: rows }));
@@ -661,7 +664,7 @@ function ResultsPanel({ result, trends, loadingTrends, projectId, onSave, saving
                   <Badge variant="outline" className="text-xs">{k.intent}</Badge>
                 </div>
                 <div className="flex gap-3 mt-2.5 text-xs">
-                  <VolumeStat label="Global" value={volumeFor("", k.keyword)?.volume ?? null} />
+                  <VolumeStat label="Global" value={volumeFor("global", k.keyword)?.volume ?? null} />
                   <VolumeStat label="Indonesia" value={volumeFor("id", k.keyword)?.volume ?? null} />
                   {loadingTrends && <Loader2 className="size-3 animate-spin text-muted-foreground" />}
                 </div>
