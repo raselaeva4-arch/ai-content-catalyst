@@ -20,6 +20,8 @@ import { saveHistory } from "@/lib/history.functions";
 import { createTranscript, listTranscripts } from "@/lib/transcripts.functions";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { ProjectSwitcher } from "@/components/project-switcher";
+import { VolumeCheckPanel } from "@/components/volume-check-panel";
+import type { VolumeRow } from "@/lib/volume.functions";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -590,7 +592,7 @@ function Dashboard() {
             </Button>
           </Card>
 
-          {result && <ResultsPanel result={result} trends={trendData} loadingTrends={loadingTrends} onSave={onSave} saving={saving} savedId={savedId} />}
+          {result && <ResultsPanel result={result} trends={trendData} loadingTrends={loadingTrends} projectId={projectId} onSave={onSave} saving={saving} savedId={savedId} />}
         </div>
 
         {/* Right: Knowledge Base */}
@@ -618,7 +620,12 @@ function Dashboard() {
   );
 }
 
-function ResultsPanel({ result, trends, loadingTrends, onSave, saving, savedId }: { result: AnalysisResult; trends: TrendRow[] | null; loadingTrends: boolean; onSave: () => Promise<void>; saving: boolean; savedId: string | null }) {
+function ResultsPanel({ result, trends, loadingTrends, projectId, onSave, saving, savedId }: { result: AnalysisResult; trends: TrendRow[] | null; loadingTrends: boolean; projectId: string; onSave: () => Promise<void>; saving: boolean; savedId: string | null }) {
+  const [volumeRows, setVolumeRows] = useState<VolumeRow[]>([]);
+  const [volumeGeo, setVolumeGeo] = useState("id");
+  const volumeFor = (kw: string) => volumeRows.find((r) => r.keyword.trim().toLowerCase() === kw.trim().toLowerCase());
+  const allKeywords = Array.from(new Set([...result.main_keywords.map((k) => k.keyword), ...result.secondary_keywords]));
+  const handleVolumeResults = useCallback((rows: VolumeRow[], geo: string) => { setVolumeRows(rows); setVolumeGeo(geo || ""); }, []);
   const trendFor = (kw: string) => trends?.find((t) => t.keyword === kw);
   return (
     <Card className="p-6 shadow-[var(--shadow-elevated)] space-y-6">
@@ -654,7 +661,7 @@ function ResultsPanel({ result, trends, loadingTrends, onSave, saving, savedId }
                 </div>
                 <div className="flex gap-3 mt-2.5 text-xs">
                   <TrendStat label="Global" value={loadingTrends ? null : t?.global ?? null} />
-                  <TrendStat label="Indonesia" value={loadingTrends ? null : t?.indonesia ?? null} />
+                  <TrendStat label="Indonesia" value={volumeGeo === "id" ? volumeFor(k.keyword)?.volume ?? null : (loadingTrends ? null : t?.indonesia ?? null)} />
                   {loadingTrends && <Loader2 className="size-3 animate-spin text-muted-foreground" />}
                 </div>
               </div>
@@ -662,6 +669,8 @@ function ResultsPanel({ result, trends, loadingTrends, onSave, saving, savedId }
           })}
         </div>
       </section>
+
+      <VolumeCheckPanel projectId={projectId} keywords={allKeywords} onResults={handleVolumeResults} />
 
       <section>
         <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Hash className="size-4" />Secondary Keywords</h3>
