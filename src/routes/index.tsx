@@ -88,6 +88,19 @@ function Dashboard() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [trendData, setTrendData] = useState<TrendRow[] | null>(null);
   const [loadingTrends, setLoadingTrends] = useState(false);
+  const [savedTranscripts, setSavedTranscripts] = useState<{ id: string; title: string; transcript: string; platform: string | null; created_at: string }[]>([]);
+  const [loadingTranscripts, setLoadingTranscripts] = useState(false);
+  const [transcriptsLoaded, setTranscriptsLoaded] = useState(false);
+
+  const loadSavedTranscripts = useCallback(async () => {
+    setLoadingTranscripts(true);
+    try {
+      const res = await listTranscriptsFn({ data: { project_id: projectId } });
+      setSavedTranscripts(res.items as any);
+      setTranscriptsLoaded(true);
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setLoadingTranscripts(false); }
+  }, [listTranscriptsFn, projectId]);
 
   const saveFileTranscript = useCallback(async (path: string) => {
     const target = files.find((f) => f.path === path) ?? null;
@@ -347,12 +360,15 @@ function Dashboard() {
             </div>
 
             <Tabs defaultValue="urls">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="urls"><Link2 className="size-3.5 mr-1.5" />Links</TabsTrigger>
                 <TabsTrigger value="reel"><Video className="size-3.5 mr-1.5" />Reel/TikTok</TabsTrigger>
                 <TabsTrigger value="record"><Mic className="size-3.5 mr-1.5" />Record</TabsTrigger>
                 <TabsTrigger value="files"><Upload className="size-3.5 mr-1.5" />Files</TabsTrigger>
                 <TabsTrigger value="notes"><FileText className="size-3.5 mr-1.5" />Notes</TabsTrigger>
+                <TabsTrigger value="transcripts" onClick={() => { if (!transcriptsLoaded && !loadingTranscripts) void loadSavedTranscripts(); }}>
+                  <History className="size-3.5 mr-1.5" />Transkrip
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="urls" className="space-y-2 mt-4">
