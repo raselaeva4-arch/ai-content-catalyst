@@ -60,9 +60,7 @@ export const checkVolume = createServerFn({ method: "POST" })
   .middleware([publicAccess])
   .inputValidator((d) => InputSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const lovableKey = process.env.LOVABLE_API_KEY;
     const apifyKey = process.env.APIFY_API_KEY;
-    if (!lovableKey) throw new Error("LOVABLE_API_KEY belum dikonfigurasi");
     if (!apifyKey) throw new Error("Koneksi Apify belum tersambung");
 
     const keywords = Array.from(new Set(data.keywords.map((k) => k.toLowerCase())));
@@ -89,8 +87,7 @@ export const checkVolume = createServerFn({ method: "POST" })
     const res = await fetch(`${GATEWAY_URL}/acts/${ACTOR_ID}/run-sync-get-dataset-items?timeout=280`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": apifyKey,
+        Authorization: `Bearer ${apifyKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
@@ -113,7 +110,7 @@ export const checkVolume = createServerFn({ method: "POST" })
         .update({ status: "done", results: results as any })
         .eq("id", row.id);
     }
-    return { id: row?.id ?? null, results, settings };
+    return { id: row?.id ?? null, results, settings, status: "done" as const };
   });
 
 export const listVolumeChecks = createServerFn({ method: "POST" })
