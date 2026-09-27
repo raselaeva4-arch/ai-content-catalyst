@@ -3,7 +3,7 @@ import { z } from "zod";
 import { publicAccess } from "@/lib/public-access";
 
 const APIFY_API_URL = "https://api.apify.com/v2";
-const ACTOR_ID = "aitorsm~keyword-volume";
+const ACTOR_ID = "eDIgVN04lqJpOmOZ";
 
 const InputSchema = z.object({
   project_id: z.string().uuid(),
@@ -60,8 +60,10 @@ export const checkVolume = createServerFn({ method: "POST" })
   .middleware([publicAccess])
   .inputValidator((d) => InputSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const apifyKey = process.env.APIFY_API_KEY;
-    if (!apifyKey) throw new Error("Koneksi Apify belum tersambung");
+    const apifyKey = process.env.APIFY_API_KEY ?? process.env.APIFY_TOKEN;
+    if (!apifyKey) {
+      throw new Error("APIFY_API_KEY belum dikonfigurasi di server. Tambahkan API token Apify sebagai secret server, bukan di frontend.");
+    }
 
     const keywords = Array.from(new Set(data.keywords.map((k) => k.toLowerCase())));
     const input: Record<string, string | number | boolean | string[]> = {
@@ -84,6 +86,16 @@ export const checkVolume = createServerFn({ method: "POST" })
       .select("id")
       .single();
 
+    const authCheck = await fetch(`${APIFY_API_URL}/users/me`, {
+      headers: { Authorization: `Bearer ${apifyKey}` },
+    });
+    if (!authCheck.ok) {
+      const authBody = await authCheck.text();
+      const authMsg = `Token Apify tidak valid atau sudah kedaluwarsa (${authCheck.status}). Buat/rotasi token di Apify lalu set sebagai APIFY_API_KEY di server.`;
+      console.error(`Apify authentication failed [${authCheck.status}]: ${authBody.slice(0, 300)}`);
+      if (row?.id) await context.supabase.from("keyword_volume_checks").update({ status: "error", error: authMsg }).eq("id", row.id);
+      throw new Error(authMsg);
+    }
     const res = await fetch(`${APIFY_API_URL}/acts/${ACTOR_ID}/run-sync-get-dataset-items?timeout=280`, {
       method: "POST",
       headers: {
@@ -96,7 +108,9 @@ export const checkVolume = createServerFn({ method: "POST" })
     if (!res.ok) {
       const body = await res.text();
       console.error(`Apify request failed [${res.status}]: ${body}`);
-      const msg = `Apify error ${res.status}: ${body.slice(0, 300)}`;
+      const msg = res.status === 401
+        ? "Apify menolak autentikasi (401). Periksa APIFY_API_KEY di server dan pastikan token belum expired/ter-rotate."
+        : `Apify error ${res.status}: ${body.slice(0, 300)}`;
       if (row?.id) await context.supabase.from("keyword_volume_checks").update({ status: "error", error: msg }).eq("id", row.id);
       throw new Error(msg);
     }
