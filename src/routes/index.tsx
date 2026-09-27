@@ -806,10 +806,6 @@ function KeywordSelectionPanel({
   }, [result, selection.main, selection.secondary, selection.selectedTitle]);
 
   const [volumeByGeo, setVolumeByGeo] = useState<Record<string, VolumeRow[]>>({});
-  const volumeFor = (geo: string, keyword: string) => {
-    const rows = volumeByGeo[geo] ?? [];
-    return rows.find((r) => r.keyword.trim().toLowerCase() === keyword.trim().toLowerCase());
-  };
 
   const updateMain = (index: number, patch: Partial<KeywordSelection["main"][number]>) => {
     onChange({ ...selection, main: selection.main.map((k, i) => i === index ? { ...k, ...patch } : k) });
@@ -885,7 +881,7 @@ function KeywordSelectionPanel({
           <h2 className="font-semibold">Pilih Keyword & Judul</h2>
           <p className="text-xs text-muted-foreground mt-1">Centang keyword yang ingin dipakai. Edit keyword dan volume secara manual jika perlu. Data pilihan disimpan bersama History.</p>
         </div>
-        <Button size="sm" onClick={onSave} disabled={saving || !result || (!selection.main.length && !selection.secondary.length && !selection.selectedTitle)}>
+        <Button size="sm" onClick={onSave} disabled={saving || !result || (!!savedId && !editId) || (!selection.main.length && !selection.secondary.length && !selection.selectedTitle)}>
           {saving ? <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Menyimpan...</> : editId ? "Simpan Perubahan" : savedId ? "Tersimpan" : "Simpan Pilihan"}
         </Button>
       </div>
