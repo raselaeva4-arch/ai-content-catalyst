@@ -37,9 +37,21 @@ export function VolumeCheckPanel({ projectId, keywords, onResults }: Props) {
   }, [keywords]);
 
   const loadHistory = async () => {
-    try { setHistory((await list({ data: { project_id: projectId } })).items); } catch { /* ignore */ }
+    try {
+      const items = (await list({ data: { project_id: projectId } })).items as any[];
+      setHistory(items);
+      const latest = items.find((item) => item.status === "done" && Array.isArray(item.results) && item.results.length);
+      if (latest) {
+        const latestRows = latest.results as VolumeRow[];
+        setRows(latestRows);
+        onResults?.(latestRows, String(latest.settings?.geo ?? ""));
+        if (latest.settings?.geo !== undefined) setGeo(String(latest.settings.geo));
+      }
+    } catch { /* ignore */ }
   };
-  useEffect(() => { loadHistory(); }, [projectId]);
+  useEffect(() => {
+    loadHistory();
+  }, [projectId]);
 
   const applyHistory = (h: any) => {
     const nextRows = Array.isArray(h.results) ? h.results as VolumeRow[] : [];
