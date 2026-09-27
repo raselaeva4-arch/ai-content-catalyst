@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { publicAccess } from "@/lib/public-access";
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/apify";
+const APIFY_API_URL = "https://api.apify.com/v2";
 const ACTOR_ID = "aitorsm~keyword-volume";
 
 const InputSchema = z.object({
@@ -84,7 +84,7 @@ export const checkVolume = createServerFn({ method: "POST" })
       .select("id")
       .single();
 
-    const res = await fetch(`${GATEWAY_URL}/acts/${ACTOR_ID}/run-sync-get-dataset-items?timeout=280`, {
+    const res = await fetch(`${APIFY_API_URL}/acts/${ACTOR_ID}/run-sync-get-dataset-items?timeout=280`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apifyKey}`,
