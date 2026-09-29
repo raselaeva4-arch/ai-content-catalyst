@@ -26,6 +26,7 @@ export const listPortalTools = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("portal_tools")
       .select("*")
+      .eq("user_id", context.userId)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
@@ -40,6 +41,7 @@ export const getPortalTool = createServerFn({ method: "GET" })
       .from("portal_tools")
       .select("*")
       .eq("slug", data.slug)
+      .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
     return { item: row ?? null };
@@ -81,6 +83,7 @@ export const updatePortalTool = createServerFn({ method: "POST" })
       .from("portal_tools")
       .update(patch)
       .eq("id", id)
+      .eq("user_id", context.userId)
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -91,7 +94,7 @@ export const deletePortalTool = createServerFn({ method: "POST" })
   .middleware([publicAccess])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
-    const { error } = await context.supabase.from("portal_tools").delete().eq("id", data.id);
+    const { error } = await context.supabase.from("portal_tools").delete().eq("id", data.id).eq("user_id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
