@@ -127,6 +127,7 @@ type ImportTranscriptItem = {
   transcript: string;
   notes: string | null;
   platform: string | null;
+  source_type: string;
   created_at: string;
 };
 
@@ -264,6 +265,7 @@ function ArticlesPage() {
     setArticleTitle(row.title ?? "");
     setMainKeyword(row.main_keyword ?? "");
     setSecondary((row.secondary_keywords ?? []).join(", "));
+    setNotes((row as any).notes ?? "");
     setDraft({
       title: row.title,
       slug: row.slug ?? "",
