@@ -8,6 +8,8 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { PortalSidebar } from "@/components/portal-sidebar";
+import { AuthGate } from "@/components/auth-gate";
+import { useRouterState } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
 
