@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { analyzeContent } from "@/lib/analysis.functions";
 import { getTrends } from "@/lib/trends.functions";
 import { listKb, saveKb, deleteKb, saveKbFile } from "@/lib/kb.functions";
+import { KnowledgeBaseList, type KnowledgeBaseItem } from "@/components/knowledge-base-list";
 import { transcribeMedia } from "@/lib/transcribe.functions";
 import { transcribeUrl } from "@/lib/transcribe-url.functions";
 import { getHistoryById, saveHistory, updateHistory } from "@/lib/history.functions";
@@ -775,6 +776,7 @@ function Dashboard() {
             const r = await listKbFn({ data: { project_id: projectId } });
             setKb(r.items as any);
           }}
+          onUpdated={(updated) => setKb((prev) => prev.map((x) => x.id === updated.id ? { ...x, ...updated } : x))}
         />
       </main>
     </div>
@@ -1075,12 +1077,13 @@ function VolumeStat({ label, value }: { label: string; value: number | null }) {
   );
 }
 
-function KnowledgeBasePanel({ projectId, items, onSave, onSaveFile, onDelete }: {
+function KnowledgeBasePanel({ projectId, items, onSave, onSaveFile, onDelete, onUpdated }: {
   projectId: string;
   items: { id: string; type: string; title: string; content: string }[];
   onSave: (p: { type: "playbook" | "persona" | "knowledge"; title: string; content: string }) => Promise<void>;
   onSaveFile: (p: { path: string; name: string; mime: string; type: "playbook" | "persona" | "knowledge" }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onUpdated: (item: KnowledgeBaseItem) => void;
 }) {
   const [adding, setAdding] = useState(false);
   const [type, setType] = useState<"playbook" | "persona" | "knowledge">("playbook");
@@ -1088,7 +1091,29 @@ function KnowledgeBasePanel({ projectId, items, onSave, onSaveFile, onDelete }: 
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploadingKb, setUploadingKb] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const key = `kb-ai-selection:${projectId}`;
+    const stored = typeof window !== "undefined" ? window.localStorage.getItem(key) : null;
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setSelectedIds(parsed.filter((id) => items.some((item) => item.id === id)));
+          return;
+        }
+      } catch {}
+    }
+    setSelectedIds(items.map((item) => item.id));
+  }, [projectId, items.length]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(`kb-ai-selection:${projectId}`, JSON.stringify(selectedIds));
+    }
+  }, [projectId, selectedIds]);
 
   const submit = async () => {
     if (!title.trim() || !content.trim()) { toast.error("Title & content wajib diisi"); return; }
@@ -1174,29 +1199,15 @@ function KnowledgeBasePanel({ projectId, items, onSave, onSaveFile, onDelete }: 
         </div>
       )}
 
-      <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-        {items.length === 0 && !adding && (
-          <p className="text-xs text-muted-foreground text-center py-6">
-            Belum ada knowledge. Tambah playbook, persona, atau upload file (PDF/DOC/PPT/Image) — AI akan mengekstrak isinya otomatis.
-          </p>
-        )}
-        {items.map((it) => (
-          <div key={it.id} className="group p-2.5 rounded-md hover:bg-accent/40 transition-colors">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{it.type}</Badge>
-                  <span className="text-sm font-medium truncate">{it.title}</span>
-                </div>
-                <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{it.content}</p>
-              </div>
-              <Button variant="ghost" size="icon" className="size-7 opacity-0 group-hover:opacity-100" onClick={() => onDelete(it.id)}>
-                <Trash2 className="size-3.5" />
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
+      <KnowledgeBaseList
+        projectId={projectId}
+        items={items as KnowledgeBaseItem[]}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        onUpdated={onUpdated}
+        onDelete={onDelete}
+        emptyText="Belum ada knowledge. Tambah playbook, persona, atau upload file (PDF/DOC/PPT/Image) — AI akan mengekstrak isinya otomatis."
+      />
     </Card>
   );
 }
