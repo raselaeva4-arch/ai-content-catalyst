@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { FolderKanban, Settings, Loader2 } from "lucide-react";
+import { FolderKanban, Settings, Loader2, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActiveProject } from "@/hooks/use-active-project";
@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 type Project = { id: string; name: string };
 
 export function ProjectSwitcher() {
+  const navigate = useNavigate();
   const { projectId, setProjectId, mounted } = useActiveProject();
   const listFn = useServerFn(listProjects);
   const createFn = useServerFn(createProject);
@@ -103,6 +104,18 @@ export function ProjectSwitcher() {
           <Settings className="size-3.5" />
         </Button>
       </Link>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8 shrink-0"
+        title="Keluar"
+        onClick={async () => {
+          await supabase.auth.signOut();
+          navigate({ to: "/auth", search: { next: "/" }, replace: true });
+        }}
+      >
+        <LogOut className="size-3.5" />
+      </Button>
     </div>
   );
 }

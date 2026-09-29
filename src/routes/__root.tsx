@@ -8,6 +8,8 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { PortalSidebar } from "@/components/portal-sidebar";
+import { AuthGate } from "@/components/auth-gate";
+import { useRouterState } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
 
@@ -115,11 +117,19 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isAuthPage = pathname === "/auth";
   return (
     <QueryClientProvider client={queryClient}>
-      <PortalSidebar>
-        <Outlet />
-      </PortalSidebar>
+      <AuthGate>
+        {isAuthPage ? (
+          <Outlet />
+        ) : (
+          <PortalSidebar>
+            <Outlet />
+          </PortalSidebar>
+        )}
+      </AuthGate>
     </QueryClientProvider>
   );
 }
