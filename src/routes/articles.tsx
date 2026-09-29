@@ -19,6 +19,15 @@ import {
   Mic2,
   BookOpen,
   CheckCircle2,
+  Download,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  Heading2,
+  Quote,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +58,7 @@ import {
   deleteArticle,
 } from "@/lib/articles.functions";
 import { useActiveProject } from "@/hooks/use-active-project";
-import { listKb } from "@/lib/kb.functions";
+import { getKbDownloadUrl, listKb, updateKb } from "@/lib/kb.functions";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { HtmlExportDialog } from "@/components/html-export-dialog";
 
@@ -141,6 +150,85 @@ type ImportTranscriptItem = {
 
 type ImportMode = "topic" | "main" | "secondary" | "title";
 
+function sanitizeRichHtml(input: string) {
+  const doc = new DOMParser().parseFromString(input, "text/html");
+  doc.querySelectorAll("script,iframe,object,embed,style,link").forEach((el) => el.remove());
+  doc.querySelectorAll("*").forEach((el) => {
+    Array.from(el.attributes).forEach((attr) => {
+      if (attr.name.toLowerCase().startsWith("on") || attr.name.toLowerCase() === "srcdoc") {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  return doc.body.innerHTML;
+}
+
+function RichKnowledgeEditor({
+  initialContent,
+  onSave,
+  saving,
+}: {
+  initialContent: string;
+  onSave: (html: string) => Promise<void>;
+  saving: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [html, setHtml] = useState(() => {
+    const value = initialContent.trim();
+    if (!value) return "<p></p>";
+    if (/<[a-z][\\s\\S]*>/i.test(value)) return sanitizeRichHtml(value);
+    return value.split(/\\n{2,}/).map((p) => `<p>${p.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\\n/g, "<br>")}</p>`).join("");
+  });
+
+  useEffect(() => {
+    const next = initialContent.trim();
+    const normalized = /<[a-z][\\s\\S]*>/i.test(next)
+      ? sanitizeRichHtml(next)
+      : next.split(/\\n{2,}/).map((p) => `<p>${p.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\\n/g, "<br>")}</p>`).join("");
+    setHtml(normalized || "<p></p>");
+  }, [initialContent]);
+
+  const command = (name: string, value?: string) => {
+    ref.current?.focus();
+    document.execCommand(name, false, value);
+    if (ref.current) setHtml(sanitizeRichHtml(ref.current.innerHTML));
+  };
+
+  const finish = async () => {
+    const clean = sanitizeRichHtml(ref.current?.innerHTML || html);
+    await onSave(clean);
+  };
+
+  return (
+    <div className="rounded-lg border overflow-hidden bg-background">
+      <div className="flex flex-wrap items-center gap-1 border-b bg-muted/30 p-2">
+        <Button type="button" variant="ghost" size="icon" className="size-8" title="Bold" onClick={() => command("bold")}><Bold className="size-4" /></Button>
+        <Button type="button" variant="ghost" size="icon" className="size-8" title="Italic" onClick={() => command("italic")}><Italic className="size-4" /></Button>
+        <Button type="button" variant="ghost" size="icon" className="size-8" title="Underline" onClick={() => command("underline")}><Underline className="size-4" /></Button>
+        <span className="mx-1 h-5 w-px bg-border" />
+        <Button type="button" variant="ghost" size="icon" className="size-8" title="Heading" onClick={() => command("formatBlock", "h2")}><Heading2 className="size-4" /></Button>
+        <Button type="button" variant="ghost" size="icon" className="size-8" title="Bullet list" onClick={() => command("insertUnorderedList")}><List className="size-4" /></Button>
+        <Button type="button" variant="ghost" size="icon" className="size-8" title="Numbered list" onClick={() => command("insertOrderedList")}><ListOrdered className="size-4" /></Button>
+        <Button type="button" variant="ghost" size="icon" className="size-8" title="Quote" onClick={() => command("formatBlock", "blockquote")}><Quote className="size-4" /></Button>
+        <div className="ml-auto">
+          <Button type="button" size="sm" onClick={finish} disabled={saving}>
+            {saving ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Check className="size-3.5 mr-1.5" />}
+            Selesai & Simpan
+          </Button>
+        </div>
+      </div>
+      <div
+        ref={ref}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={(e) => setHtml(sanitizeRichHtml(e.currentTarget.innerHTML))}
+        dangerouslySetInnerHTML={{ __html: html }}
+        className="min-h-[360px] max-h-[60vh] overflow-y-auto p-5 text-sm leading-7 outline-none prose prose-sm max-w-none dark:prose-invert"
+      />
+    </div>
+  );
+}
+
 function ArticlePreview({ markdown }: { markdown: string }) {
   const blocks = useMemo(() => markdown.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean), [markdown]);
   return (
@@ -181,6 +269,8 @@ function ArticlesPage() {
   const [knowledgeBase, setKnowledgeBase] = useState<{ id: string; type: string; title: string; content: string; source_name?: string | null; source_path?: string | null }[]>([]);
   const [selectedKnowledgeIds, setSelectedKnowledgeIds] = useState<string[]>([]);
   const [kbLoading, setKbLoading] = useState(true);
+  const [kbEdit, setKbEdit] = useState<{ id: string; type: "playbook" | "persona" | "knowledge"; title: string; content: string; source_name?: string | null; source_path?: string | null } | null>(null);
+  const [kbEditSaving, setKbEditSaving] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -220,6 +310,47 @@ function ArticlesPage() {
       .finally(() => setKbLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, projectId]);
+
+  async function downloadKnowledge(item: typeof knowledgeBase[number]) {
+    try {
+      const res = await getKbDownloadUrl({ data: { id: item.id, project_id: projectId } });
+      const a = document.createElement("a");
+      a.href = res.url;
+      a.download = res.filename;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast.success("Download dimulai.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
+  async function saveKnowledgeEdit(html: string) {
+    if (!kbEdit) return;
+    setKbEditSaving(true);
+    try {
+      const clean = sanitizeRichHtml(html);
+      const res = await updateKb({
+        data: {
+          id: kbEdit.id,
+          project_id: projectId,
+          type: kbEdit.type,
+          title: kbEdit.title.trim(),
+          content: clean,
+        },
+      });
+      const updated = res.item as any;
+      setKnowledgeBase((rows) => rows.map((row) => row.id === updated.id ? { ...row, ...updated } : row));
+      setKbEdit(null);
+      toast.success("Knowledge Base disimpan. Perubahan langsung dipakai AI.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setKbEditSaving(false);
+    }
+  }
 
   async function onGenerate() {
     if (topic.trim().length < 3) {
@@ -499,20 +630,31 @@ function ArticlesPage() {
                 {knowledgeBase.map((kb) => {
                   const checked = selectedKnowledgeIds.includes(kb.id);
                   return (
-                    <button
-                      key={kb.id}
-                      type="button"
-                      onClick={() => setSelectedKnowledgeIds((ids) => checked ? ids.filter((id) => id !== kb.id) : [...ids, kb.id])}
-                      className="w-full text-left px-3 py-2 flex items-start gap-2 hover:bg-accent/40"
-                    >
-                      <span className={`mt-0.5 size-4 rounded border flex items-center justify-center shrink-0 ${checked ? "bg-primary text-primary-foreground border-primary" : ""}`}>
-                        {checked && <CheckCircle2 className="size-3" />}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-xs font-medium truncate">{kb.title}</span>
-                        <span className="block text-[10px] text-muted-foreground truncate">{kb.type}{kb.source_name ? ` · ${kb.source_name}` : ""}</span>
-                      </span>
-                    </button>
+                    <div key={kb.id} className="px-3 py-2 border-b last:border-b-0">
+                      <div className="flex items-start gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedKnowledgeIds((ids) => checked ? ids.filter((id) => id !== kb.id) : [...ids, kb.id])}
+                          className="flex-1 min-w-0 text-left flex items-start gap-2 hover:bg-accent/30 rounded-md p-1"
+                        >
+                          <span className={`mt-0.5 size-4 rounded border flex items-center justify-center shrink-0 ${checked ? "bg-primary text-primary-foreground border-primary" : ""}`}>
+                            {checked && <CheckCircle2 className="size-3" />}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-xs font-medium truncate">{kb.title}</span>
+                            <span className="block text-[10px] text-muted-foreground truncate">{kb.type}{kb.source_name ? ` · ${kb.source_name}` : ""}</span>
+                          </span>
+                        </button>
+                        <div className="flex gap-0.5 shrink-0">
+                          <Button type="button" variant="ghost" size="icon" className="size-7" title="Edit Knowledge" onClick={() => setKbEdit(kb as any)}>
+                            <Pencil className="size-3.5" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="size-7" title="Download File" onClick={() => downloadKnowledge(kb)}>
+                            <Download className="size-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -637,6 +779,38 @@ function ArticlesPage() {
             )}
           </div>
         </div>
+      <Dialog open={!!kbEdit} onOpenChange={(open) => { if (!open && !kbEditSaving) setKbEdit(null); }}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Edit Knowledge Base</DialogTitle>
+            <DialogDescription>
+              Edit isi file/knowledge langsung. Setelah disimpan, versi ini menjadi konteks terbaru yang digunakan AI.
+            </DialogDescription>
+          </DialogHeader>
+          {kbEdit && (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
+                <Input value={kbEdit.title} onChange={(e) => setKbEdit({ ...kbEdit, title: e.target.value })} placeholder="Judul" />
+                <Select value={kbEdit.type} onValueChange={(v) => setKbEdit({ ...kbEdit, type: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="playbook">Playbook</SelectItem>
+                    <SelectItem value="persona">Persona</SelectItem>
+                    <SelectItem value="knowledge">Knowledge</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <RichKnowledgeEditor
+                key={kbEdit.id}
+                initialContent={kbEdit.content}
+                saving={kbEditSaving}
+                onSave={saveKnowledgeEdit}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
