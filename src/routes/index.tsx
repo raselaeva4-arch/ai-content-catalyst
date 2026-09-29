@@ -153,7 +153,7 @@ function Dashboard() {
             ? savedSelection
             : {
                 main: restoredMain.map((k: any) => ({ keyword: String(k.keyword), rationale: String(k.rationale ?? ""), intent: String(k.intent ?? "informational"), selected: true })),
-                secondary: restoredSecondary.map((keyword) => ({ keyword, selected: true })),
+                secondary: restoredSecondary.map((keyword: string) => ({ keyword, selected: true })),
                 selectedTitle: restoredTitles[0] ?? "",
               }
         );
