@@ -89,6 +89,7 @@ type ArticleRow = {
   secondary_keywords: string[];
   category: string | null;
   meta_description: string | null;
+  notes: string | null;
   slug: string | null;
   outline: string[];
   content: string;
@@ -265,7 +266,7 @@ function ArticlesPage() {
     setArticleTitle(row.title ?? "");
     setMainKeyword(row.main_keyword ?? "");
     setSecondary((row.secondary_keywords ?? []).join(", "));
-    setNotes((row as any).notes ?? "");
+    setNotes(row.notes ?? "");
     setDraft({
       title: row.title,
       slug: row.slug ?? "",
