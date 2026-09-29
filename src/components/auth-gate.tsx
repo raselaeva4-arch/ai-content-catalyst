@@ -25,7 +25,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") navigate({ to: "/auth" });
+      if (event === "SIGNED_OUT") navigate({ to: "/auth", search: { next: "/" } });
     });
     return () => {
       active = false;

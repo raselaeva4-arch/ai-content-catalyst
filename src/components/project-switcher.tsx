@@ -111,7 +111,7 @@ export function ProjectSwitcher() {
         title="Keluar"
         onClick={async () => {
           await supabase.auth.signOut();
-          navigate({ to: "/auth", replace: true });
+          navigate({ to: "/auth", search: { next: "/" }, replace: true });
         }}
       >
         <LogOut className="size-3.5" />
