@@ -192,6 +192,9 @@ function ArticlesPage() {
   }
 
   useEffect(() => {
+    setHistorySources([]);
+    setTranscriptSources([]);
+    setImportOpen(false);
     if (mounted) refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, projectId]);
@@ -331,7 +334,7 @@ function ArticlesPage() {
   }
 
   function applyTranscriptImport(item: ImportTranscriptItem) {
-    const value = (item.notes?.trim() || item.transcript?.trim() || item.title || "").slice(0, 2000);
+    const value = (item.transcript?.trim() || item.notes?.trim() || item.title || "").slice(0, 2000);
     setTopic(value);
     setImportOpen(false);
     toast.success("Transcript diimpor sebagai ide / topik.");
