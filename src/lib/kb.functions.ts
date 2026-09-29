@@ -49,6 +49,70 @@ export const saveKb = createServerFn({ method: "POST" })
     return { item: row };
   });
 
+export const updateKb = createServerFn({ method: "POST" })
+  .middleware([publicAccess])
+  .inputValidator((d) => z.object({
+    id: z.string().uuid(),
+    project_id: z.string().uuid(),
+    type: z.enum(["playbook", "persona", "knowledge"]),
+    title: z.string().min(1).max(200),
+    content: z.string().min(1).max(100000),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("knowledge_base")
+      .update({
+        type: data.type,
+        title: data.title,
+        content: data.content,
+      })
+      .eq("id", data.id)
+      .eq("project_id", data.project_id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return { item: row };
+  });
+
+export const getKbDownloadUrl = createServerFn({ method: "POST" })
+  .middleware([publicAccess])
+  .inputValidator((d) => z.object({
+    id: z.string().uuid(),
+    project_id: z.string().uuid(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("knowledge_base")
+      .select("id,title,source_path,source_name,source_mime,content")
+      .eq("id", data.id)
+      .eq("project_id", data.project_id)
+      .single();
+    if (error) throw new Error(error.message);
+
+    if (row.source_path) {
+      const { data: signed, error: signError } = await context.supabase.storage
+        .from("uploads")
+        .createSignedUrl(row.source_path, 300);
+      if (signError || !signed?.signedUrl) {
+        throw new Error(signError?.message ?? "Gagal membuat link download.");
+      }
+      return {
+        url: signed.signedUrl,
+        filename: row.source_name || row.title,
+        mime: row.source_mime || "application/octet-stream",
+        original: true,
+      };
+    }
+
+    const filename = `${String(row.title).replace(/[^a-z0-9-_]+/gi, "-").replace(/^-+|-+$/g, "") || "knowledge"}.html`;
+    return {
+      url: `data:text/html;charset=utf-8,${encodeURIComponent(String(row.content || ""))}`,
+      filename,
+      mime: "text/html",
+      original: false,
+    };
+  });
+
 export const deleteKb = createServerFn({ method: "POST" })
   .middleware([publicAccess])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
