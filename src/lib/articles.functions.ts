@@ -14,6 +14,7 @@ const ToneEnum = z.enum(["santai", "praktis", "formal"]);
 const GenerateSchema = z.object({
   project_id: z.string().uuid(),
   topic: z.string().min(3).max(2000),
+  title: z.string().max(300).optional().default(""),
   main_keyword: z.string().max(200).optional().default(""),
   secondary_keywords: z.string().max(2000).optional().default(""),
   category: z.enum(["Mentor", "Investor", "Leader"]).optional().default("Leader"),
@@ -69,6 +70,7 @@ export const generateArticle = createServerFn({ method: "POST" })
     if (kbContext) userText += `=== KNOWLEDGE BASE (persona, playbook, style guide) ===\n${kbContext}\n\n`;
     userText += `=== BRIEF ARTIKEL ===\n`;
     userText += `Ide / Topik: ${data.topic}\n`;
+    if (data.title) userText += `Judul Artikel (gunakan persis seperti input pengguna): ${data.title}\n`;
     if (data.main_keyword) userText += `Main Keyword: ${data.main_keyword}\n`;
     if (secondary.length) userText += `Secondary Keywords: ${secondary.join(", ")}\n`;
     userText += `Kategori: ${data.category}\n`;
@@ -110,11 +112,46 @@ export const generateArticle = createServerFn({ method: "POST" })
     const args = aiJson.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
     if (!args) throw new Error("AI tidak mengembalikan artikel terstruktur.");
     const article = JSON.parse(args);
+    if (data.title.trim()) {
+      article.title = data.title.trim();
+      const content = String(article.content ?? "");
+      article.content = content.match(/^#\s+.+$/m)
+        ? content.replace(/^#\s+.+$/m, `# ${data.title.trim()}`)
+        : `# ${data.title.trim()}\n\n${content}`;
+    }
     const word_count = String(article.content ?? "").trim().split(/\s+/).filter(Boolean).length;
 
     return {
       article: { ...article, word_count, tone_level: data.tone_level },
       readability: computeReadability(String(article.content ?? "")),
+    };
+  });
+
+export const listArticleImportSources = createServerFn({ method: "POST" })
+  .middleware([publicAccess])
+  .inputValidator((d) => z.object({ project_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const [historyRes, transcriptRes] = await Promise.all([
+      context.supabase
+        .from("saved_generations")
+        .select("id,title,summary,main_keywords,secondary_keywords,article_titles,notes,extracted,created_at")
+        .eq("project_id", data.project_id)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      context.supabase
+        .from("transcripts")
+        .select("id,title,transcript,notes,platform,created_at")
+        .eq("project_id", data.project_id)
+        .order("created_at", { ascending: false })
+        .limit(100),
+    ]);
+
+    if (historyRes.error) throw new Error(historyRes.error.message);
+    if (transcriptRes.error) throw new Error(transcriptRes.error.message);
+
+    return {
+      history: historyRes.data ?? [],
+      transcripts: transcriptRes.data ?? [],
     };
   });
 
