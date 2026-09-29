@@ -20,6 +20,7 @@ const GenerateSchema = z.object({
   category: z.enum(["Mentor", "Investor", "Leader"]).optional().default("Leader"),
   word_target: z.number().int().min(400).max(2500).optional().default(900),
   extra_notes: z.string().max(5000).optional().default(""),
+  knowledge_base_ids: z.array(z.string().uuid()).optional().default([]),
   tone_level: ToneEnum.optional().default("praktis"),
 });
 
@@ -37,6 +38,14 @@ const SaveSchema = z.object({
   word_count: z.number().int().min(0).default(0),
   status: z.enum(["draft", "final"]).default("draft"),
   notes: z.string().max(10000).nullable().optional(),
+  knowledge_base_ids: z.array(z.string().uuid()).default([]),
+  knowledge_base_sources: z.array(z.object({
+    id: z.string().uuid(),
+    title: z.string(),
+    type: z.string(),
+    source_name: z.string().nullable().optional(),
+    source_path: z.string().nullable().optional(),
+  })).default([]),
   tone_level: ToneEnum.default("praktis"),
   tone_insight: z.any().optional().default({}),
 });
@@ -50,16 +59,36 @@ export const generateArticle = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { data: kb } = await context.supabase
+    const kbQuery = context.supabase
       .from("knowledge_base")
-      .select("type,title,content")
+      .select("id,type,title,content,source_name,source_path,source_mime,created_at")
       .eq("project_id", data.project_id)
-      .order("created_at", { ascending: false })
-      .limit(30);
+      .order("created_at", { ascending: false });
+
+    const { data: kb, error: kbError } = data.knowledge_base_ids.length
+      ? await kbQuery.in("id", data.knowledge_base_ids)
+      : await kbQuery.limit(50);
+
+    if (kbError) throw new Error(`Knowledge Base gagal dimuat: ${kbError.message}`);
+
+    const kbSources = (kb ?? []).map((k) => ({
+      id: String(k.id),
+      title: String(k.title),
+      type: String(k.type),
+      source_name: k.source_name ? String(k.source_name) : null,
+      source_path: k.source_path ? String(k.source_path) : null,
+    }));
 
     const kbContext = (kb ?? [])
-      .map((k) => `### ${String(k.type).toUpperCase()} — ${k.title}\n${String(k.content).slice(0, 6000)}`)
+      .map((k) => {
+        const source = k.source_name || k.source_path ? `Sumber file: ${k.source_name || k.source_path}` : "Sumber: Knowledge Base";
+        return `### ${String(k.type).toUpperCase()} — ${k.title}\n${source}\nINSTRUKSI: Gunakan isi ini sebagai sumber pengetahuan, fakta, sudut pandang, dan/atau gaya sesuai jenisnya. Jangan mengarang detail yang tidak ada.\n\n${String(k.content)}`;
+      })
       .join("\n\n");
+
+    if (!kbContext.trim()) {
+      throw new Error("Knowledge Base project ini kosong. Tambahkan file/knowledge terlebih dahulu sebelum membuat artikel.");
+    }
 
     const secondary = data.secondary_keywords
       .split(/[,\n]/)
@@ -67,7 +96,7 @@ export const generateArticle = createServerFn({ method: "POST" })
       .filter(Boolean);
 
     let userText = "";
-    if (kbContext) userText += `=== KNOWLEDGE BASE (persona, playbook, style guide) ===\n${kbContext}\n\n`;
+    userText += `=== KNOWLEDGE BASE WAJIB DIGUNAKAN ===\n${kbContext}\n\n`;
     userText += `=== BRIEF ARTIKEL ===\n`;
     userText += `Ide / Topik: ${data.topic}\n`;
     if (data.title) userText += `Judul Artikel (gunakan persis seperti input pengguna): ${data.title}\n`;
@@ -76,7 +105,7 @@ export const generateArticle = createServerFn({ method: "POST" })
     userText += `Kategori: ${data.category}\n`;
     userText += `Target panjang: sekitar ${data.word_target} kata\n`;
     if (data.extra_notes) userText += `Catatan tambahan: ${data.extra_notes}\n`;
-    userText += `\n${ARS_TONE_RULES}\n\nTulis artikel SEO lengkap sesuai format dan kaidah di atas.`;
+    userText += `\n${ARS_TONE_RULES}\n\nATURAN SUMBER: Artikel harus menggunakan informasi dan arahan yang relevan dari Knowledge Base di atas. Prioritaskan sumber yang dipilih pengguna. Jangan mengklaim fakta, angka, pengalaman, atau kutipan yang tidak didukung konteks Knowledge Base. Jika sumber tidak memuat suatu fakta, tulis secara umum atau hilangkan.\n\nTulis artikel SEO lengkap sesuai format dan kaidah di atas.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -122,7 +151,7 @@ export const generateArticle = createServerFn({ method: "POST" })
     const word_count = String(article.content ?? "").trim().split(/\s+/).filter(Boolean).length;
 
     return {
-      article: { ...article, word_count, tone_level: data.tone_level },
+      article: { ...article, word_count, tone_level: data.tone_level, knowledge_base_ids: kbSources.map((s) => s.id), knowledge_base_sources: kbSources },
       readability: computeReadability(String(article.content ?? "")),
     };
   });
@@ -172,7 +201,7 @@ export const saveArticle = createServerFn({ method: "POST" })
   .middleware([publicAccess])
   .inputValidator((d) => SaveSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
+      const { data: row, error } = await context.supabase
       .from("articles")
       .insert(data)
       .select()
