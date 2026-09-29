@@ -549,7 +549,7 @@ function Dashboard() {
                     <p className="text-sm font-medium">Extract Transcript dari Video</p>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Paste link <strong>TikTok</strong> atau <strong>Instagram Reels</strong> publik. AI akan otomatis download videonya & transcribe speech-nya ke teks.
+                    link <strong>TikTok</strong> atau <strong>Instagram Reels</strong> publik. AI akan otomatis download videonya & transcribe speech-nya ke teks.
                   </p>
                 </div>
                 <div className="flex gap-2">
