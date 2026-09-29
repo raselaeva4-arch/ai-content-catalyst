@@ -117,11 +117,19 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isAuthPage = pathname === "/auth";
   return (
     <QueryClientProvider client={queryClient}>
-      <PortalSidebar>
-        <Outlet />
-      </PortalSidebar>
+      <AuthGate>
+        {isAuthPage ? (
+          <Outlet />
+        ) : (
+          <PortalSidebar>
+            <Outlet />
+          </PortalSidebar>
+        )}
+      </AuthGate>
     </QueryClientProvider>
   );
 }
