@@ -14,6 +14,9 @@ import {
 
   Pencil,
   X,
+  Import,
+  FileClock,
+  Mic2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +24,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -31,6 +41,7 @@ import {
 import {
   generateArticle,
   listArticles,
+  listArticleImportSources,
   saveArticle,
   updateArticle,
   deleteArticle,
@@ -98,6 +109,29 @@ type Draft = {
   word_count: number;
 };
 
+type ImportHistoryItem = {
+  id: string;
+  title: string;
+  summary: string | null;
+  main_keywords: any[];
+  secondary_keywords: any[];
+  article_titles: any[];
+  notes: string | null;
+  extracted: Record<string, any>;
+  created_at: string;
+};
+
+type ImportTranscriptItem = {
+  id: string;
+  title: string;
+  transcript: string;
+  notes: string | null;
+  platform: string | null;
+  created_at: string;
+};
+
+type ImportMode = "topic" | "main" | "secondary" | "title";
+
 function ArticlePreview({ markdown }: { markdown: string }) {
   const blocks = useMemo(() => markdown.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean), [markdown]);
   return (
@@ -115,14 +149,23 @@ function ArticlesPage() {
   const { projectId, mounted } = useActiveProject();
   const genFn = useServerFn(generateArticle);
   const listFn = useServerFn(listArticles);
+  const importFn = useServerFn(listArticleImportSources);
   const saveFn = useServerFn(saveArticle);
   const updateFn = useServerFn(updateArticle);
   const deleteFn = useServerFn(deleteArticle);
 
   const [topic, setTopic] = useState("");
+  const [articleTitle, setArticleTitle] = useState("");
   const [mainKeyword, setMainKeyword] = useState("");
   const [secondary, setSecondary] = useState("");
   const [category, setCategory] = useState<"Mentor" | "Investor" | "Leader">("Leader");
+
+  const [importOpen, setImportOpen] = useState(false);
+  const [importMode, setImportMode] = useState<ImportMode>("topic");
+  const [importTab, setImportTab] = useState<"history" | "transcript">("history");
+  const [importLoading, setImportLoading] = useState(false);
+  const [historySources, setHistorySources] = useState<ImportHistoryItem[]>([]);
+  const [transcriptSources, setTranscriptSources] = useState<ImportTranscriptItem[]>([]);
   const [wordTarget, setWordTarget] = useState("900");
   const [notes, setNotes] = useState("");
 
@@ -164,6 +207,7 @@ function ArticlesPage() {
         data: {
           project_id: projectId,
           topic: topic.trim(),
+          title: articleTitle.trim(),
           main_keyword: mainKeyword.trim(),
           secondary_keywords: secondary.trim(),
           category,
@@ -188,6 +232,7 @@ function ArticlesPage() {
         title: draft.title,
         topic: topic.trim() || null,
         main_keyword: draft.main_keyword || null,
+        notes: notes.trim() || null,
         secondary_keywords: draft.secondary_keywords ?? [],
         category: draft.category || null,
         meta_description: draft.meta_description || null,
@@ -216,6 +261,7 @@ function ArticlesPage() {
   function loadForEdit(row: ArticleRow) {
     setEditingId(row.id);
     setTopic(row.topic ?? "");
+    setArticleTitle(row.title ?? "");
     setMainKeyword(row.main_keyword ?? "");
     setSecondary((row.secondary_keywords ?? []).join(", "));
     setDraft({
@@ -230,6 +276,62 @@ function ArticlesPage() {
       word_count: row.word_count,
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function openImport(mode: ImportMode, tab: "history" | "transcript" = "history") {
+    setImportMode(mode);
+    setImportTab(tab);
+    setImportOpen(true);
+    if (historySources.length || transcriptSources.length) return;
+
+    setImportLoading(true);
+    try {
+      const res = await importFn({ data: { project_id: projectId } });
+      setHistorySources((res.history ?? []) as ImportHistoryItem[]);
+      setTranscriptSources((res.transcripts ?? []) as ImportTranscriptItem[]);
+    } catch (e) {
+      toast.error((e as Error).message);
+      setImportOpen(false);
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
+  function historyMainKeywords(item: ImportHistoryItem) {
+    return (item.main_keywords ?? [])
+      .map((k: any) => typeof k === "string" ? k : k?.keyword)
+      .filter(Boolean)
+      .map(String);
+  }
+
+  function historySecondaryKeywords(item: ImportHistoryItem) {
+    return (item.secondary_keywords ?? [])
+      .map((k: any) => typeof k === "string" ? k : k?.keyword)
+      .filter(Boolean)
+      .map(String);
+  }
+
+  function historyTopic(item: ImportHistoryItem) {
+    const note = item.notes?.trim();
+    if (note) return note;
+    const keyTopics = Array.isArray(item.extracted?.key_topics) ? item.extracted.key_topics.filter(Boolean).join(", ") : "";
+    return (item.summary?.trim() || keyTopics || item.title || "").slice(0, 2000);
+  }
+
+  function applyHistoryImport(item: ImportHistoryItem, mode: ImportMode, value?: string) {
+    if (mode === "topic") setTopic(historyTopic(item));
+    if (mode === "main") setMainKeyword(value || historyMainKeywords(item)[0] || "");
+    if (mode === "secondary") setSecondary(historySecondaryKeywords(item).join(", "));
+    if (mode === "title") setArticleTitle(value || String(item.article_titles?.[0] ?? ""));
+    setImportOpen(false);
+    toast.success("Data history diimpor ke form artikel.");
+  }
+
+  function applyTranscriptImport(item: ImportTranscriptItem) {
+    const value = (item.notes?.trim() || item.transcript?.trim() || item.title || "").slice(0, 2000);
+    setTopic(value);
+    setImportOpen(false);
+    toast.success("Transcript diimpor sebagai ide / topik.");
   }
 
   async function onDelete(id: string) {
@@ -278,17 +380,43 @@ function ArticlesPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="topic">Ide / Topik</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="topic">Ide / Topik</Label>
+              <Button type="button" variant="outline" size="sm" className="h-7" onClick={() => openImport("topic")}>
+                <Import className="size-3.5 mr-1.5" />Impor
+              </Button>
+            </div>
             <Textarea id="topic" rows={3} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Contoh: Kebangkitan industri kreatif Indonesia menuju panggung global" maxLength={2000} />
+            <p className="text-[10px] text-muted-foreground">Bisa mengambil Catatan dari Keyword Explorer, History, atau isi transcript.</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="mk">Main Keyword</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="article-title">Judul Artikel</Label>
+              <Button type="button" variant="outline" size="sm" className="h-7" onClick={() => openImport("title")}>
+                <Import className="size-3.5 mr-1.5" />Impor dari History
+              </Button>
+            </div>
+            <Input id="article-title" value={articleTitle} onChange={(e) => setArticleTitle(e.target.value)} placeholder="Opsional — AI akan memakai judul ini persis" maxLength={300} />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="mk">Main Keyword</Label>
+              <Button type="button" variant="outline" size="sm" className="h-7" onClick={() => openImport("main")}>
+                <Import className="size-3.5 mr-1.5" />Impor dari History
+              </Button>
+            </div>
             <Input id="mk" value={mainKeyword} onChange={(e) => setMainKeyword(e.target.value)} placeholder="industri kreatif indonesia" maxLength={200} />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="sk">Secondary Keywords</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="sk">Secondary Keywords</Label>
+              <Button type="button" variant="outline" size="sm" className="h-7" onClick={() => openImport("secondary")}>
+                <Import className="size-3.5 mr-1.5" />Impor dari History
+              </Button>
+            </div>
             <Textarea id="sk" rows={2} value={secondary} onChange={(e) => setSecondary(e.target.value)} placeholder="pisahkan dengan koma" maxLength={2000} />
           </div>
 
@@ -422,6 +550,77 @@ function ArticlesPage() {
             )}
           </div>
         </div>
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {importMode === "topic" ? "Impor Ide / Topik" :
+               importMode === "main" ? "Impor Main Keyword" :
+               importMode === "secondary" ? "Impor Secondary Keyword" :
+               "Impor Judul Artikel"}
+            </DialogTitle>
+            <DialogDescription>
+              Ambil data yang sudah tersimpan di History atau Transcript untuk mengisi form Artikel SEO.
+            </DialogDescription>
+          </DialogHeader>
+
+          {importMode === "topic" && (
+            <div className="flex gap-2 border-b pb-3">
+              <Button size="sm" variant={importTab === "history" ? "default" : "outline"} onClick={() => setImportTab("history")}>
+                <FileClock className="size-3.5 mr-1.5" />History / Catatan
+              </Button>
+              <Button size="sm" variant={importTab === "transcript" ? "default" : "outline"} onClick={() => setImportTab("transcript")}>
+                <Mic2 className="size-3.5 mr-1.5" />Transcript
+              </Button>
+            </div>
+          )}
+
+          <div className="max-h-[55vh] overflow-y-auto space-y-2 pr-1">
+            {importLoading ? (
+              <div className="py-10 text-center text-sm text-muted-foreground"><Loader2 className="size-5 mx-auto mb-2 animate-spin" />Memuat sumber import…</div>
+            ) : importMode === "topic" && importTab === "transcript" ? (
+              transcriptSources.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">Belum ada transcript di project ini.</p>
+              ) : transcriptSources.map((item) => (
+                <Card key={item.id} className="p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium">{item.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-3">{item.notes || item.transcript || "Transcript kosong."}</p>
+                      <p className="text-[10px] text-muted-foreground mt-2">{item.platform || item.source_type || "Transcript"} · {new Date(item.created_at).toLocaleString("id-ID")}</p>
+                    </div>
+                    <Button size="sm" onClick={() => applyTranscriptImport(item)}>Pakai</Button>
+                  </div>
+                </Card>
+              ))
+            ) : historySources.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Belum ada History tersimpan di project ini.</p>
+            ) : historySources.map((item) => {
+              const main = historyMainKeywords(item);
+              const secondary = historySecondaryKeywords(item);
+              const titles = (item.article_titles ?? []).map(String).filter(Boolean);
+              return (
+                <Card key={item.id} className="p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{item.title}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{new Date(item.created_at).toLocaleString("id-ID")}</p>
+                      {importMode === "topic" && <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{item.notes || item.summary || item.title}</p>}
+                      {importMode === "main" && <div className="flex flex-wrap gap-1 mt-2">{main.length ? main.map((k) => <Badge key={k} variant="outline">{k}</Badge>) : <span className="text-xs text-muted-foreground">Tidak ada main keyword.</span>}</div>}
+                      {importMode === "secondary" && <div className="flex flex-wrap gap-1 mt-2">{secondary.length ? secondary.map((k) => <Badge key={k} variant="secondary">{k}</Badge>) : <span className="text-xs text-muted-foreground">Tidak ada secondary keyword.</span>}</div>}
+                      {importMode === "title" && <div className="space-y-1 mt-2">{titles.length ? titles.map((t, i) => <div key={i} className="flex items-center gap-2"><span className="text-xs flex-1">{t}</span><Button size="sm" variant="outline" onClick={() => applyHistoryImport(item, "title", t)}>Pakai</Button></div>) : <span className="text-xs text-muted-foreground">Tidak ada judul artikel.</span>}</div>}
+                    </div>
+                    {importMode !== "title" && (
+                      <Button size="sm" onClick={() => applyHistoryImport(item, importMode)}>Pakai</Button>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       </main>
     </div>
   );
