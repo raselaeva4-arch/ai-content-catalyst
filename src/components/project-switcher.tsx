@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 type Project = { id: string; name: string };
 
 export function ProjectSwitcher() {
+  const navigate = useNavigate();
   const { projectId, setProjectId, mounted } = useActiveProject();
   const listFn = useServerFn(listProjects);
   const createFn = useServerFn(createProject);
