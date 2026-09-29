@@ -103,6 +103,18 @@ export function ProjectSwitcher() {
           <Settings className="size-3.5" />
         </Button>
       </Link>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8 shrink-0"
+        title="Keluar"
+        onClick={async () => {
+          await supabase.auth.signOut();
+          navigate({ to: "/auth", replace: true });
+        }}
+      >
+        <LogOut className="size-3.5" />
+      </Button>
     </div>
   );
 }
