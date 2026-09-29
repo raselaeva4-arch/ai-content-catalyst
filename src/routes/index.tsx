@@ -153,7 +153,7 @@ function Dashboard() {
             ? savedSelection
             : {
                 main: restoredMain.map((k: any) => ({ keyword: String(k.keyword), rationale: String(k.rationale ?? ""), intent: String(k.intent ?? "informational"), selected: true })),
-                secondary: restoredSecondary.map((keyword) => ({ keyword, selected: true })),
+                secondary: restoredSecondary.map((keyword: string) => ({ keyword, selected: true })),
                 selectedTitle: restoredTitles[0] ?? "",
               }
         );
@@ -915,7 +915,7 @@ function KeywordSelectionPanel({
           <div className="space-y-2">
             {selection.main.map((k, i) => (
               <div key={i} className="grid grid-cols-[auto_minmax(0,1fr)_110px_110px_auto] gap-2 items-center rounded-lg border p-2">
-                <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateMain(i, { selected: e.target.checked })} className="size-4" aria-label={\`Pilih \${k.keyword || "main keyword"}\`} />
+                <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateMain(i, { selected: e.target.checked })} className="size-4" aria-label={`Pilih ${k.keyword || "main keyword"}`} />
                 <Input value={k.keyword} placeholder="Main keyword" onChange={(e) => updateMain(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
                 <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global" inputMode="numeric" onChange={(e) => updateMain(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
                 <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia" inputMode="numeric" onChange={(e) => updateMain(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
@@ -935,7 +935,7 @@ function KeywordSelectionPanel({
           <div className="space-y-2">
             {selection.secondary.map((k, i) => (
               <div key={i} className="grid grid-cols-[auto_minmax(0,1fr)_110px_110px_auto] gap-2 items-center rounded-lg border p-2">
-                <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateSecondary(i, { selected: e.target.checked })} className="size-4" aria-label={\`Pilih \${k.keyword || "secondary keyword"}\`} />
+                <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateSecondary(i, { selected: e.target.checked })} className="size-4" aria-label={`Pilih ${k.keyword || "secondary keyword"}`} />
                 <Input value={k.keyword} placeholder="Secondary keyword" onChange={(e) => updateSecondary(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
                 <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global" inputMode="numeric" onChange={(e) => updateSecondary(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
                 <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia" inputMode="numeric" onChange={(e) => updateSecondary(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
