@@ -17,6 +17,8 @@ import {
   Import,
   FileClock,
   Mic2,
+  BookOpen,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +49,7 @@ import {
   deleteArticle,
 } from "@/lib/articles.functions";
 import { useActiveProject } from "@/hooks/use-active-project";
+import { listKb } from "@/lib/kb.functions";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { HtmlExportDialog } from "@/components/html-export-dialog";
 
@@ -90,6 +93,8 @@ type ArticleRow = {
   category: string | null;
   meta_description: string | null;
   notes: string | null;
+  knowledge_base_ids: string[];
+  knowledge_base_sources: { id: string; title: string; type: string; source_name?: string | null; source_path?: string | null }[];
   slug: string | null;
   outline: string[];
   content: string;
@@ -108,6 +113,8 @@ type Draft = {
   category: string;
   content: string;
   word_count: number;
+  knowledge_base_ids?: string[];
+  knowledge_base_sources?: { id: string; title: string; type: string; source_name?: string | null; source_path?: string | null }[];
 };
 
 type ImportHistoryItem = {
@@ -152,6 +159,7 @@ function ArticlesPage() {
   const genFn = useServerFn(generateArticle);
   const listFn = useServerFn(listArticles);
   const importFn = useServerFn(listArticleImportSources);
+  const listKbFn = useServerFn(listKb);
   const saveFn = useServerFn(saveArticle);
   const updateFn = useServerFn(updateArticle);
   const deleteFn = useServerFn(deleteArticle);
@@ -170,6 +178,9 @@ function ArticlesPage() {
   const [transcriptSources, setTranscriptSources] = useState<ImportTranscriptItem[]>([]);
   const [wordTarget, setWordTarget] = useState("900");
   const [notes, setNotes] = useState("");
+  const [knowledgeBase, setKnowledgeBase] = useState<{ id: string; type: string; title: string; content: string; source_name?: string | null; source_path?: string | null }[]>([]);
+  const [selectedKnowledgeIds, setSelectedKnowledgeIds] = useState<string[]>([]);
+  const [kbLoading, setKbLoading] = useState(true);
 
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -195,7 +206,18 @@ function ArticlesPage() {
     setHistorySources([]);
     setTranscriptSources([]);
     setImportOpen(false);
-    if (mounted) refresh();
+    setKbLoading(true);
+    if (!mounted) return;
+    Promise.all([
+      refresh(),
+      listKbFn({ data: { project_id: projectId } }).then((res) => {
+        const rows = (res.items ?? []) as any[];
+        setKnowledgeBase(rows);
+        setSelectedKnowledgeIds(rows.map((x) => x.id));
+      }),
+    ])
+      .catch((e) => toast.error((e as Error).message))
+      .finally(() => setKbLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, projectId]);
 
@@ -218,6 +240,7 @@ function ArticlesPage() {
           category,
           word_target: Number(wordTarget) || 900,
           extra_notes: notes.trim(),
+          knowledge_base_ids: selectedKnowledgeIds,
         },
       });
       setDraft(res.article as Draft);
@@ -238,6 +261,10 @@ function ArticlesPage() {
         topic: topic.trim() || null,
         main_keyword: draft.main_keyword || null,
         notes: notes.trim() || null,
+        knowledge_base_ids: draft.knowledge_base_ids ?? selectedKnowledgeIds,
+        knowledge_base_sources: draft.knowledge_base_sources ?? knowledgeBase
+          .filter((kb) => (draft.knowledge_base_ids ?? selectedKnowledgeIds).includes(kb.id))
+          .map((kb) => ({ id: kb.id, title: kb.title, type: kb.type, source_name: kb.source_name ?? null, source_path: kb.source_path ?? null })),
         secondary_keywords: draft.secondary_keywords ?? [],
         category: draft.category || null,
         meta_description: draft.meta_description || null,
@@ -270,6 +297,8 @@ function ArticlesPage() {
     setMainKeyword(row.main_keyword ?? "");
     setSecondary((row.secondary_keywords ?? []).join(", "));
     setNotes(row.notes ?? "");
+    const savedKbIds = Array.isArray(row.knowledge_base_ids) ? row.knowledge_base_ids : [];
+    if (savedKbIds.length) setSelectedKnowledgeIds(savedKbIds);
     setDraft({
       title: row.title,
       slug: row.slug ?? "",
@@ -280,6 +309,8 @@ function ArticlesPage() {
       category: row.category ?? "Leader",
       content: row.content,
       word_count: row.word_count,
+      knowledge_base_ids: savedKbIds,
+      knowledge_base_sources: Array.isArray(row.knowledge_base_sources) ? row.knowledge_base_sources : [],
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -453,11 +484,48 @@ function ArticlesPage() {
           </div>
 
           <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="flex items-center gap-1.5"><BookOpen className="size-3.5" />Knowledge yang dipakai AI</Label>
+              <span className="text-[10px] text-muted-foreground">{selectedKnowledgeIds.length}/{knowledgeBase.length} dipilih</span>
+            </div>
+            {kbLoading ? (
+              <div className="rounded-md border p-3 text-xs text-muted-foreground"><Loader2 className="inline size-3 mr-1 animate-spin" />Memuat Knowledge Base…</div>
+            ) : knowledgeBase.length === 0 ? (
+              <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+                Belum ada Knowledge Base. Tambahkan file/knowledge di Dashboard sebelum generate artikel.
+              </div>
+            ) : (
+              <div className="rounded-md border max-h-40 overflow-y-auto divide-y">
+                {knowledgeBase.map((kb) => {
+                  const checked = selectedKnowledgeIds.includes(kb.id);
+                  return (
+                    <button
+                      key={kb.id}
+                      type="button"
+                      onClick={() => setSelectedKnowledgeIds((ids) => checked ? ids.filter((id) => id !== kb.id) : [...ids, kb.id])}
+                      className="w-full text-left px-3 py-2 flex items-start gap-2 hover:bg-accent/40"
+                    >
+                      <span className={`mt-0.5 size-4 rounded border flex items-center justify-center shrink-0 ${checked ? "bg-primary text-primary-foreground border-primary" : ""}`}>
+                        {checked && <CheckCircle2 className="size-3" />}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-xs font-medium truncate">{kb.title}</span>
+                        <span className="block text-[10px] text-muted-foreground truncate">{kb.type}{kb.source_name ? ` · ${kb.source_name}` : ""}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <p className="text-[10px] text-muted-foreground">Semua KB dipilih secara default. AI hanya memakai sumber yang dicentang untuk artikel ini.</p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="notes">Catatan tambahan (opsional)</Label>
             <Textarea id="notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Angle khusus, data yang harus disebut, dsb." maxLength={5000} />
           </div>
 
-          <Button className="w-full" onClick={onGenerate} disabled={loading}>
+          <Button className="w-full" onClick={onGenerate} disabled={loading || kbLoading || knowledgeBase.length === 0 || selectedKnowledgeIds.length === 0}>
             {loading ? <><Loader2 className="size-4 mr-2 animate-spin" />Menulis artikel…</> : <><Sparkles className="size-4 mr-2" />Generate Artikel</>}
           </Button>
         </Card>
@@ -500,6 +568,19 @@ function ArticlesPage() {
                 <Label>Meta Description ({draft.meta_description.length} karakter)</Label>
                 <Textarea rows={2} value={draft.meta_description} onChange={(e) => setDraft({ ...draft, meta_description: e.target.value })} />
               </div>
+
+              {draft.knowledge_base_sources && draft.knowledge_base_sources.length > 0 && (
+                <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold"><BookOpen className="size-3.5" />Sumber Knowledge yang dipakai AI</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {draft.knowledge_base_sources.map((source) => (
+                      <Badge key={source.id} variant="outline" className="text-[10px]">
+                        {source.title}{source.source_name ? ` · ${source.source_name}` : ""}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {draft.secondary_keywords?.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
