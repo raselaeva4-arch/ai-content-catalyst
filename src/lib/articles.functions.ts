@@ -140,7 +140,7 @@ export const listArticleImportSources = createServerFn({ method: "POST" })
         .limit(100),
       context.supabase
         .from("transcripts")
-        .select("id,title,transcript,notes,platform,created_at")
+        .select("id,title,transcript,notes,platform,source_type,created_at")
         .eq("project_id", data.project_id)
         .order("created_at", { ascending: false })
         .limit(100),
