@@ -17,6 +17,7 @@ export const listProjects = createServerFn({ method: "POST" })
     const { data, error } = await context.supabase
       .from("projects")
       .select("*")
+      .eq("user_id", context.userId)
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
     return { items: data ?? [] };
@@ -44,6 +45,7 @@ export const updateProject = createServerFn({ method: "POST" })
       .from("projects")
       .update(rest)
       .eq("id", id)
+      .eq("user_id", context.userId)
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -57,7 +59,7 @@ export const deleteProject = createServerFn({ method: "POST" })
     if (data.id === DEFAULT_PROJECT_ID) {
       throw new Error("Project default tidak bisa dihapus.");
     }
-    const { error } = await context.supabase.from("projects").delete().eq("id", data.id);
+    const { error } = await context.supabase.from("projects").delete().eq("id", data.id).eq("user_id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

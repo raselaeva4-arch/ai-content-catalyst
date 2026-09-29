@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useActiveProject } from "@/hooks/use-active-project";
 import { listProjects, createProject } from "@/lib/projects.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { UserBadge } from "@/components/user-badge";
 
 type Project = { id: string; name: string };
 
@@ -104,6 +105,7 @@ export function ProjectSwitcher() {
           <Settings className="size-3.5" />
         </Button>
       </Link>
+      <UserBadge />
       <Button
         variant="ghost"
         size="icon"
