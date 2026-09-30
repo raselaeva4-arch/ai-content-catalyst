@@ -3,7 +3,7 @@ import { z } from "zod";
 import { publicAccess } from "@/lib/public-access";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/apify/v2";
-const ACTOR_ID = "eDIgVN04lqJpOmOZ";
+const ACTOR_ID = "aitorsm~keyword-volume";
 
 const InputSchema = z.object({
   project_id: z.string().uuid(),
