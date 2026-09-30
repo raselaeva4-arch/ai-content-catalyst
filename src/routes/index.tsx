@@ -1100,22 +1100,7 @@ function KeywordSelectionPanel({
                   <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global Volume" inputMode="numeric" onChange={(e) => updateMain(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
                   <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia Volume" inputMode="numeric" onChange={(e) => updateMain(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
                 </div>
-                <KeywordVolumeCheckButton
-                  projectId={projectId}
-                  keyword={k.keyword}
-                  currentVolume={k.indonesiaVolume ?? k.globalVolume}
-                  onResult={async (row, geo) => {
-                    const isIndonesia = ["id", "indonesia"].includes(geo.trim().toLowerCase());
-                    const nextMain = selection.main.map((item, index) =>
-                      index === i
-                        ? { ...item, ...(isIndonesia ? { indonesiaVolume: row.volume } : { globalVolume: row.volume }) }
-                        : item,
-                    );
-                    const nextSelection = { ...selection, main: nextMain };
-                    onChange(nextSelection);
-                    await persistVolumeSelection?.(nextSelection);
-                  }}
-                />
+
               </div>
             ))}
           </div>
@@ -1156,22 +1141,7 @@ function KeywordSelectionPanel({
                   <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global Volume" inputMode="numeric" onChange={(e) => updateSecondary(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
                   <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia Volume" inputMode="numeric" onChange={(e) => updateSecondary(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
                 </div>
-                <KeywordVolumeCheckButton
-                  projectId={projectId}
-                  keyword={k.keyword}
-                  currentVolume={k.indonesiaVolume ?? k.globalVolume}
-                  onResult={async (row, geo) => {
-                    const isIndonesia = ["id", "indonesia"].includes(geo.trim().toLowerCase());
-                    const nextSecondary = selection.secondary.map((item, index) =>
-                      index === i
-                        ? { ...item, ...(isIndonesia ? { indonesiaVolume: row.volume } : { globalVolume: row.volume }) }
-                        : item,
-                    );
-                    const nextSelection = { ...selection, secondary: nextSecondary };
-                    onChange(nextSelection);
-                    await persistVolumeSelection?.(nextSelection);
-                  }}
-                />
+
               </div>
             ))}
           </div>
