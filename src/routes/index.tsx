@@ -753,6 +753,24 @@ function Dashboard() {
             savedId={savedId}
             editId={editId}
             projectId={projectId}
+            persistVolumeSelection={async (nextSelection) => {
+              if (!savedId) return;
+              try {
+                const current = await getHistoryFn({ data: { id: savedId } });
+                const sourceInputs = (current.item as any)?.source_inputs ?? {};
+                await updateHistoryFn({
+                  data: {
+                    id: savedId,
+                    source_inputs: {
+                      ...sourceInputs,
+                      keyword_selection: nextSelection,
+                    },
+                  },
+                });
+              } catch (error) {
+                toast.warning("Volume berhasil dicek, tetapi sinkronisasi History gagal: " + (error as Error).message);
+              }
+            }}
           />
 
         </div>
@@ -922,6 +940,7 @@ function KeywordSelectionPanel({
   savedId,
   editId,
   projectId,
+  persistVolumeSelection,
 }: {
   result: AnalysisResult | null;
   selection: KeywordSelection;
@@ -933,6 +952,7 @@ function KeywordSelectionPanel({
   savedId: string | null;
   editId?: string | null;
   projectId: string;
+  persistVolumeSelection?: (nextSelection: KeywordSelection) => Promise<void>;
 }) {
   const [mainText, setMainText] = useState("");
   const [secondaryText, setSecondaryText] = useState("");
@@ -1065,15 +1085,7 @@ function KeywordSelectionPanel({
                     );
                     const nextSelection = { ...selection, main: nextMain };
                     onChange(nextSelection);
-                    if (savedId) {
-                      await updateHistoryFn({
-                        data: {
-                          id: savedId,
-                          main_keywords: nextMain,
-                          secondary_keywords: selection.secondary,
-                        },
-                      });
-                    }
+                    await persistVolumeSelection?.(nextSelection);
                   }}
                 />
               </div>
@@ -1111,15 +1123,7 @@ function KeywordSelectionPanel({
                     );
                     const nextSelection = { ...selection, secondary: nextSecondary };
                     onChange(nextSelection);
-                    if (savedId) {
-                      await updateHistoryFn({
-                        data: {
-                          id: savedId,
-                          main_keywords: selection.main,
-                          secondary_keywords: nextSecondary,
-                        },
-                      });
-                    }
+                    await persistVolumeSelection?.(nextSelection);
                   }}
                 />
               </div>
