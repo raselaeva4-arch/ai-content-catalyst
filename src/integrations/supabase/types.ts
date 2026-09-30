@@ -129,6 +129,8 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          knowledge_base_ids: Json
+          knowledge_base_sources: Json
           main_keyword: string | null
           meta_description: string | null
           notes: string | null
@@ -149,6 +151,8 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          knowledge_base_ids?: Json
+          knowledge_base_sources?: Json
           main_keyword?: string | null
           meta_description?: string | null
           notes?: string | null
@@ -169,6 +173,8 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          knowledge_base_ids?: Json
+          knowledge_base_sources?: Json
           main_keyword?: string | null
           meta_description?: string | null
           notes?: string | null
