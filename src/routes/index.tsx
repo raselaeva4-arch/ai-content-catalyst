@@ -20,7 +20,6 @@ import { transcribeUrl } from "@/lib/transcribe-url.functions";
 import { getHistoryById, saveHistory, updateHistory } from "@/lib/history.functions";
 import { createTranscript, listTranscripts } from "@/lib/transcripts.functions";
 import { useActiveProject } from "@/hooks/use-active-project";
-import { ProjectSwitcher } from "@/components/project-switcher";
 import { VolumeCheckPanel } from "@/components/volume-check-panel";
 import { type VolumeRow } from "@/lib/volume.functions";
 
