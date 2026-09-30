@@ -154,7 +154,7 @@ export function markdownToRichHtml(markdown: string) {
       continue;
     }
 
-    const heading = trimmed.match(/^(#{1,6})\\s+(.+)$/);
+    const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
     if (heading) {
       flushParagraph();
       closeList();
