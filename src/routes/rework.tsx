@@ -536,28 +536,10 @@ function ReworkPage() {
       <Toaster richColors position="top-right" />
       
       <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link to="/">
-              <Button variant="ghost" size="sm" className="gap-1.5"><ArrowLeft className="size-4" /> Kembali</Button>
-            </Link>
-            <h1 className="text-sm font-semibold">AI Article Rework Studio</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link to="/rework-history">
-              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-                <ListChecks className="size-3.5" /> Riwayat Rework
-              </Button>
-            </Link>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs text-destructive hover:text-destructive" onClick={handleResetAll}>
-              <RotateCcw className="size-3.5" /> Reset Data (Step 0)
-            </Button>
-            <Badge variant="outline" className="gap-1.5 text-xs bg-primary/10 text-primary border-primary/20">
-              <Sparkles className="size-3" /> ARS Persona Engine Active
-            </Badge>
-          </div>
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <h1 className="text-sm font-semibold">AI Article Rework Studio</h1>
         </div>
-      </header>
+      </header>>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
