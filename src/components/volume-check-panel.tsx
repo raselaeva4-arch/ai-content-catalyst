@@ -21,7 +21,7 @@ export function VolumeCheckPanel({ projectId, keywords, onResults }: Props) {
   const [maxIdeas, setMaxIdeas] = useState(100);
   const [geo, setGeo] = useState("id");
   const [language, setLanguage] = useState("id");
-  const [network, setNetwork] = useState<"GOOGLE_SEARCH" | "GOOGLE_SEARCH_AND_PARTNERS">("GOOGLE_SEARCH");
+  const [network, setNetwork] = useState<"GOOGLE_SEARCH" | "GOOGLE_SEARCH_AND_PARTNERS">("GOOGLE_SEARCH_AND_PARTNERS");
   const [aiVolume, setAiVolume] = useState(false);
   const [adult, setAdult] = useState(false);
   const [loading, setLoading] = useState(false);
