@@ -1,8 +1,5 @@
 import { useEffect, useRef } from "react";
 import {
-  AlignCenter,
-  AlignLeft,
-  AlignRight,
   Bold,
   Check,
   Code,
@@ -27,10 +24,6 @@ function escapeHtml(value: string) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-function escapeAttribute(value: string) {
-  return escapeHtml(value).replace(/'/g, "&#39;");
 }
 
 function inlineMarkdownToHtml(value: string) {
