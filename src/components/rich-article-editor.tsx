@@ -48,6 +48,7 @@ function inlineMarkdownToHtml(value: string) {
   text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   text = text.replace(/__([^_]+)__/g, "<strong>$1</strong>");
   text = text.replace(/~~([^~]+)~~/g, "<s>$1</s>");
+  text = text.replace(/&lt;u&gt;([\\s\\S]*?)&lt;\\/u&gt;/g, "<u>$1</u>");
   text = text.replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
   text = text.replace(/_([^_\n]+)_/g, "<em>$1</em>");
 
@@ -385,9 +386,6 @@ export function RichArticleEditor({ value, onChange, minHeight = 420 }: RichArti
         <ToolbarButton label="Code" onClick={() => setBlock("PRE")}><Code className="size-4" /></ToolbarButton>
         <ToolbarButton label="Link" onClick={createLink}><Link2 className="size-4" /></ToolbarButton>
         <ToolbarButton label="Garis horizontal" onClick={() => exec("insertHorizontalRule")}><Minus className="size-4" /></ToolbarButton>
-        <ToolbarButton label="Rata kiri" onClick={() => exec("justifyLeft")}><AlignLeft className="size-4" /></ToolbarButton>
-        <ToolbarButton label="Rata tengah" onClick={() => exec("justifyCenter")}><AlignCenter className="size-4" /></ToolbarButton>
-        <ToolbarButton label="Rata kanan" onClick={() => exec("justifyRight")}><AlignRight className="size-4" /></ToolbarButton>
         <ToolbarButton label="Hapus format" onClick={() => exec("removeFormat")}><RemoveFormatting className="size-4" /></ToolbarButton>
         <span className="mx-1 h-5 w-px bg-border" />
         <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5" onClick={copyCurrent}>
