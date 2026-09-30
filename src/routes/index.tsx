@@ -22,7 +22,7 @@ import { createTranscript, listTranscripts } from "@/lib/transcripts.functions";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { VolumeCheckPanel } from "@/components/volume-check-panel";
-import { checkVolume, type VolumeRow } from "@/lib/volume.functions";
+import { type VolumeRow } from "@/lib/volume.functions";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -811,134 +811,6 @@ function Dashboard() {
   );
 }
 
-function KeywordVolumeCheckButton({
-  projectId,
-  keyword,
-  currentVolume,
-  onResult,
-}: {
-  projectId: string;
-  keyword: string;
-  currentVolume?: number | null;
-  onResult: (result: VolumeRow, geo: string, language: string) => Promise<void> | void;
-}) {
-  const check = useServerFn(checkVolume);
-  const [open, setOpen] = useState(false);
-  const [geo, setGeo] = useState("id");
-  const [language, setLanguage] = useState("id");
-  const [loading, setLoading] = useState(false);
-
-  const run = async () => {
-    const cleanKeyword = keyword.trim();
-    if (!cleanKeyword) {
-      toast.error("Keyword masih kosong.");
-      return;
-    }
-    if (!geo.trim() || !language.trim()) {
-      toast.error("Lokasi dan bahasa wajib diisi.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await check({
-        data: {
-          project_id: projectId,
-          keywords: [cleanKeyword],
-          mode: "metrics",
-          maxIdeas: 100,
-          geo: geo.trim(),
-          language: language.trim(),
-          network: "GOOGLE_SEARCH_AND_PARTNERS",
-          aiVolume: false,
-          includeAdultKeywords: false,
-        },
-      });
-      const row = response.results.find(
-        (item) => item.keyword.trim().toLowerCase() === cleanKeyword.toLowerCase(),
-      ) ?? response.results[0];
-
-      if (!row) {
-        toast.warning(`Tidak ada data volume untuk "${cleanKeyword}".`);
-        return;
-      }
-
-      await onResult(row, geo.trim(), language.trim());
-      toast.success(`Volume "${cleanKeyword}": ${row.volume == null ? "—" : row.volume.toLocaleString("id-ID")}/bln`);
-    } catch (error) {
-      toast.error((error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="shrink-0">
-      <Button
-        type="button"
-        size="sm"
-        variant={open ? "secondary" : "outline"}
-        className="h-9 gap-1.5"
-        onClick={() => setOpen((value) => !value)}
-        title="Check Volume Search"
-      >
-        <BarChart3 className="size-3.5" />
-        Check Volume
-      </Button>
-
-      {open && (
-        <div className="mt-2 rounded-lg border bg-muted/30 p-3 w-full min-w-[300px] md:min-w-[420px] space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold">Check Volume Search</p>
-              <p className="text-[10px] text-muted-foreground truncate max-w-[300px]">{keyword}</p>
-            </div>
-            {currentVolume != null && (
-              <Badge variant="secondary" className="text-[10px]">
-                {currentVolume.toLocaleString("id-ID")}/bln
-              </Badge>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium">Lokasi</label>
-              <Input
-                value={geo}
-                onChange={(event) => setGeo(event.target.value)}
-                placeholder="id / Indonesia / us"
-                className="h-8 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium">Bahasa</label>
-              <Input
-                value={language}
-                onChange={(event) => setLanguage(event.target.value)}
-                placeholder="id / en"
-                className="h-8 text-xs"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] text-muted-foreground">
-              Mode: Metrics · Network: Google Search + Partner
-            </span>
-            <Button type="button" size="sm" className="h-8" onClick={() => void run()} disabled={loading}>
-              {loading ? (
-                <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Mengecek…</>
-              ) : (
-                <><BarChart3 className="size-3.5 mr-1.5" />Cek Sekarang</>
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function KeywordSelectionPanel({
   result,
   selection,
@@ -1066,6 +938,8 @@ function KeywordSelectionPanel({
         </div>
       )}
 
+      <VolumeCheckPanel projectId={projectId} keywords={allKeywords} onResults={handleVolumeResults} />
+
       {selection.main.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-2">
@@ -1078,22 +952,6 @@ function KeywordSelectionPanel({
                 <div className="flex flex-wrap items-center gap-2">
                   <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateMain(i, { selected: e.target.checked })} className="size-4 shrink-0" aria-label={`Pilih ${k.keyword || "main keyword"}`} />
                   <Input className="min-w-[180px] flex-1" value={k.keyword} placeholder="Main keyword" onChange={(e) => updateMain(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
-                  <KeywordVolumeCheckButton
-                    projectId={projectId}
-                    keyword={k.keyword}
-                    currentVolume={k.indonesiaVolume ?? k.globalVolume}
-                    onResult={async (row, geo) => {
-                      const isIndonesia = ["id", "indonesia"].includes(geo.trim().toLowerCase());
-                      const nextMain = selection.main.map((item, index) =>
-                        index === i
-                          ? { ...item, ...(isIndonesia ? { indonesiaVolume: row.volume } : { globalVolume: row.volume }) }
-                          : item,
-                      );
-                      const nextSelection = { ...selection, main: nextMain };
-                      onChange(nextSelection);
-                      await persistVolumeSelection?.(nextSelection);
-                    }}
-                  />
                   <Button variant="ghost" size="icon" onClick={() => onChange({ ...selection, main: selection.main.filter((_, j) => j !== i) })}><Trash2 className="size-3.5" /></Button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
@@ -1119,22 +977,6 @@ function KeywordSelectionPanel({
                 <div className="flex flex-wrap items-center gap-2">
                   <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateSecondary(i, { selected: e.target.checked })} className="size-4 shrink-0" aria-label={`Pilih ${k.keyword || "secondary keyword"}`} />
                   <Input className="min-w-[180px] flex-1" value={k.keyword} placeholder="Secondary keyword" onChange={(e) => updateSecondary(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
-                  <KeywordVolumeCheckButton
-                    projectId={projectId}
-                    keyword={k.keyword}
-                    currentVolume={k.indonesiaVolume ?? k.globalVolume}
-                    onResult={async (row, geo) => {
-                      const isIndonesia = ["id", "indonesia"].includes(geo.trim().toLowerCase());
-                      const nextSecondary = selection.secondary.map((item, index) =>
-                        index === i
-                          ? { ...item, ...(isIndonesia ? { indonesiaVolume: row.volume } : { globalVolume: row.volume }) }
-                          : item,
-                      );
-                      const nextSelection = { ...selection, secondary: nextSecondary };
-                      onChange(nextSelection);
-                      await persistVolumeSelection?.(nextSelection);
-                    }}
-                  />
                   <Button variant="ghost" size="icon" onClick={() => onChange({ ...selection, secondary: selection.secondary.filter((_, j) => j !== i) })}><Trash2 className="size-3.5" /></Button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -1147,8 +989,6 @@ function KeywordSelectionPanel({
           </div>
         </section>
       )}
-
-      <VolumeCheckPanel projectId={projectId} keywords={allKeywords} onResults={handleVolumeResults} />
 
       <section>
         <div className="flex items-center justify-between mb-2">
@@ -1228,8 +1068,6 @@ function ResultsPanel({ result, trends, loadingTrends, projectId, onSave, saving
           })}
         </div>
       </section>
-
-      <VolumeCheckPanel projectId={projectId} keywords={allKeywords} onResults={handleVolumeResults} />
 
       <section>
         <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Hash className="size-4" />Secondary Keywords</h3>
