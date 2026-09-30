@@ -11,7 +11,6 @@ import {
   ExternalLink,
   Sparkles,
   Menu,
-  RotateCcw,
   ChevronLeft,
 
 } from "lucide-react";
