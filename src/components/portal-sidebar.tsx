@@ -11,9 +11,13 @@ import {
   ExternalLink,
   Sparkles,
   Menu,
+  RotateCcw,
+  ChevronLeft,
+
 } from "lucide-react";
 import { listPortalTools } from "@/lib/tools.functions";
 import { cn } from "@/lib/utils";
+import { ProjectSwitcher } from "@/components/project-switcher";
 
 type Tool = {
   id: string;
@@ -27,6 +31,7 @@ const internalLinks = [
   { to: "/", label: "Keyword Explorer", icon: Sparkles },
   { to: "/articles", label: "Artikel SEO", icon: FileText },
   { to: "/rework", label: "Rework Artikel", icon: ListChecks },
+  { to: "/rework-history", label: "Riwayat Rework", icon: History },
   { to: "/transcripts", label: "Transkrip", icon: Mic },
   { to: "/history", label: "Riwayat", icon: History },
   { to: "/projects", label: "Projects", icon: FolderKanban },
@@ -69,18 +74,25 @@ export function PortalSidebar({ children }: { children: React.ReactNode }) {
 
   const nav = (
     <nav className="flex h-full w-60 shrink-0 flex-col gap-1 border-r bg-card/40 p-3">
-      <div className="mb-3 flex items-center gap-2 px-2">
+      <div className="mb-4 flex items-center gap-2 px-2">
         <div
           className="flex size-8 items-center justify-center rounded-lg text-primary-foreground"
           style={{ background: "var(--gradient-brand)" }}
         >
-          <LayoutGrid className="size-4" />
+          <Sparkles className="size-4" />
         </div>
-        <span className="text-sm font-semibold tracking-tight">Ebran Portal</span>
+        <div className="min-w-0">
+          <span className="block text-sm font-semibold tracking-tight">KeywordForge</span>
+          <span className="block text-[10px] text-muted-foreground">AI Keyword & Content Strategy</span>
+        </div>
       </div>
 
-      <p className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        Tools
+      <div className="mb-4 px-2">
+        <ProjectSwitcher variant="sidebar" />
+      </div>
+
+      <p className="px-3 pb-1 pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        Navigasi
       </p>
       {internalLinks.map((l) => {
         const Icon = l.icon;
@@ -126,7 +138,20 @@ export function PortalSidebar({ children }: { children: React.ReactNode }) {
         </>
       )}
 
-      <div className="mt-auto pt-3">
+      <div className="mt-auto space-y-1 border-t pt-3">
+        {location.pathname === "/" && new URLSearchParams(location.search).has("edit") && (
+          <Link
+            to="/"
+            className={itemClass(false)}
+            onClick={() => {
+              window.history.replaceState({}, "", "/");
+              setOpen(false);
+            }}
+          >
+            <ChevronLeft className="size-4" />
+            Kembali dari Edit
+          </Link>
+        )}
         <Link to="/tools" className={itemClass(location.pathname === "/tools")} onClick={() => setOpen(false)}>
           <Settings2 className="size-4" />
           Kelola Tool
