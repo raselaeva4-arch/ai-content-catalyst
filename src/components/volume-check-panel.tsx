@@ -106,53 +106,54 @@ export function VolumeCheckPanel({ projectId, keywords, onResults }: Props) {
       </div>
 
       {open && (
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="md:col-span-2 space-y-1">
-          <label className="text-xs font-medium">Keywords (satu per baris) — {kwText.split("\n").filter((s) => s.trim()).length} keyword</label>
-          <Textarea rows={5} value={kwText} onChange={(e) => setKwText(e.target.value)} className="font-mono text-xs" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Mode</label>
-          <Select value={mode} onValueChange={(v) => setMode(v as any)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="metrics">Metrics (ukur keyword saya)</SelectItem>
-              <SelectItem value="ideas">Ideas (kembangkan + ukur)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Max idea rows {mode !== "ideas" && <span className="text-muted-foreground">(mode ideas saja)</span>}</label>
-          <Input type="number" min={1} max={10000} value={maxIdeas} disabled={mode !== "ideas"} onChange={(e) => setMaxIdeas(Math.max(1, Number(e.target.value) || 1))} />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Lokasi (kosong = worldwide)</label>
-          <Input value={geo} onChange={(e) => setGeo(e.target.value)} placeholder="id, us, singapore, 2360…" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Bahasa (kosong = semua)</label>
-          <Input value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="id, en…" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Network</label>
-          <Select value={network} onValueChange={(v) => setNetwork(v as any)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="GOOGLE_SEARCH">Google Search</SelectItem>
-              <SelectItem value="GOOGLE_SEARCH_AND_PARTNERS">Google Search + partners</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2 text-xs pt-5">
-          <label className="flex items-center gap-2"><input type="checkbox" checked={aiVolume} onChange={(e) => setAiVolume(e.target.checked)} />Volume AI-assistant (+$0.012/keyword)</label>
-          <label className="flex items-center gap-2"><input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} />Sertakan keyword dewasa</label>
-        </div>
-      </div>
+        <>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="md:col-span-2 space-y-1">
+              <label className="text-xs font-medium">Keywords (satu per baris) — {kwText.split("\n").filter((s) => s.trim()).length} keyword</label>
+              <Textarea rows={5} value={kwText} onChange={(e) => setKwText(e.target.value)} className="font-mono text-xs" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Mode</label>
+              <Select value={mode} onValueChange={(v) => setMode(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="metrics">Metrics (ukur keyword saya)</SelectItem>
+                  <SelectItem value="ideas">Ideas (kembangkan + ukur)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Max idea rows {mode !== "ideas" && <span className="text-muted-foreground">(mode ideas saja)</span>}</label>
+              <Input type="number" min={1} max={10000} value={maxIdeas} disabled={mode !== "ideas"} onChange={(e) => setMaxIdeas(Math.max(1, Number(e.target.value) || 1))} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Lokasi (kosong = worldwide)</label>
+              <Input value={geo} onChange={(e) => setGeo(e.target.value)} placeholder="id, us, singapore, 2360…" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Bahasa (kosong = semua)</label>
+              <Input value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="id, en…" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Network</label>
+              <Select value={network} onValueChange={(v) => setNetwork(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="GOOGLE_SEARCH">Google Search</SelectItem>
+                  <SelectItem value="GOOGLE_SEARCH_AND_PARTNERS">Google Search + partners</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 text-xs pt-5">
+              <label className="flex items-center gap-2"><input type="checkbox" checked={aiVolume} onChange={(e) => setAiVolume(e.target.checked)} />Volume AI-assistant (+$0.012/keyword)</label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} />Sertakan keyword dewasa</label>
+            </div>
+          </div>
 
-      {open &&       <Button className="w-full" onClick={onRun} disabled={loading}>
-        {loading ? <><Loader2 className="size-4 mr-2 animate-spin" />Mengecek volume… (bisa 1–3 menit)</> : <><BarChart3 className="size-4 mr-2" />Check Volume Search</>}
-      </Button>}
-
+          <Button className="w-full" onClick={onRun} disabled={loading}>
+            {loading ? <><Loader2 className="size-4 mr-2 animate-spin" />Mengecek volume… (bisa 1–3 menit)</> : <><BarChart3 className="size-4 mr-2" />Check Volume Search</>}
+          </Button>
+        </>
       )}
 
       {sorted && (
