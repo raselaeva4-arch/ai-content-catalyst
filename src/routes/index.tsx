@@ -1184,7 +1184,7 @@ function KnowledgeBasePanel({ projectId, items, onSave, onSaveFile, onDelete, on
           </div>
 
           <div className="pt-2 border-t mt-2">
-            <label className="text-xs text-muted-foreground block mb-1.5">Atau upload file (PDF, DOC, PPT, Image)</label>
+            <label className="text-xs text-muted-foreground block mb-1.5">Upload file (PDF, DOC, PPT, Image)</label>
             <input
               ref={fileInputRef}
               type="file"
