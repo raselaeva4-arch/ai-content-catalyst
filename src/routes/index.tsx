@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useRef, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast, Toaster } from "sonner";
-import { Sparkles, Link2, Upload, BookOpen, Trash2, Plus, Loader2, TrendingUp, Hash, FileText, Lightbulb, Tag, Mic, CheckCircle2, Save, History, Video, Square, RefreshCw } from "lucide-react";
+import { Sparkles, Link2, Upload, BookOpen, Trash2, Plus, Loader2, TrendingUp, Hash, FileText, Lightbulb, Tag, Mic, CheckCircle2, Save, History, Video, Square, RefreshCw, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -783,6 +783,134 @@ function Dashboard() {
   );
 }
 
+function KeywordVolumeCheckButton({
+  projectId,
+  keyword,
+  currentVolume,
+  onResult,
+}: {
+  projectId: string;
+  keyword: string;
+  currentVolume?: number | null;
+  onResult: (result: VolumeRow, geo: string, language: string) => Promise<void> | void;
+}) {
+  const check = useServerFn(checkVolume);
+  const [open, setOpen] = useState(false);
+  const [geo, setGeo] = useState("id");
+  const [language, setLanguage] = useState("id");
+  const [loading, setLoading] = useState(false);
+
+  const run = async () => {
+    const cleanKeyword = keyword.trim();
+    if (!cleanKeyword) {
+      toast.error("Keyword masih kosong.");
+      return;
+    }
+    if (!geo.trim() || !language.trim()) {
+      toast.error("Lokasi dan bahasa wajib diisi.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await check({
+        data: {
+          project_id: projectId,
+          keywords: [cleanKeyword],
+          mode: "metrics",
+          maxIdeas: 100,
+          geo: geo.trim(),
+          language: language.trim(),
+          network: "GOOGLE_SEARCH_AND_PARTNERS",
+          aiVolume: false,
+          includeAdultKeywords: false,
+        },
+      });
+      const row = response.results.find(
+        (item) => item.keyword.trim().toLowerCase() === cleanKeyword.toLowerCase(),
+      ) ?? response.results[0];
+
+      if (!row) {
+        toast.warning(`Tidak ada data volume untuk "${cleanKeyword}".`);
+        return;
+      }
+
+      await onResult(row, geo.trim(), language.trim());
+      toast.success(`Volume "${cleanKeyword}": ${row.volume == null ? "—" : row.volume.toLocaleString("id-ID")}/bln`);
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="shrink-0">
+      <Button
+        type="button"
+        size="sm"
+        variant={open ? "secondary" : "outline"}
+        className="h-9 gap-1.5"
+        onClick={() => setOpen((value) => !value)}
+        title="Check Volume Search"
+      >
+        <BarChart3 className="size-3.5" />
+        Check Volume
+      </Button>
+
+      {open && (
+        <div className="mt-2 rounded-lg border bg-muted/30 p-3 w-full min-w-[300px] md:min-w-[420px] space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold">Check Volume Search</p>
+              <p className="text-[10px] text-muted-foreground truncate max-w-[300px]">{keyword}</p>
+            </div>
+            {currentVolume != null && (
+              <Badge variant="secondary" className="text-[10px]">
+                {currentVolume.toLocaleString("id-ID")}/bln
+              </Badge>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium">Lokasi</label>
+              <Input
+                value={geo}
+                onChange={(event) => setGeo(event.target.value)}
+                placeholder="id / Indonesia / us"
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium">Bahasa</label>
+              <Input
+                value={language}
+                onChange={(event) => setLanguage(event.target.value)}
+                placeholder="id / en"
+                className="h-8 text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-muted-foreground">
+              Mode: Metrics · Network: Google Search + Partner
+            </span>
+            <Button type="button" size="sm" className="h-8" onClick={() => void run()} disabled={loading}>
+              {loading ? (
+                <><Loader2 className="size-3.5 mr-1.5 animate-spin" />Mengecek…</>
+              ) : (
+                <><BarChart3 className="size-3.5 mr-1.5" />Cek Sekarang</>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function KeywordSelectionPanel({
   result,
   selection,
@@ -916,12 +1044,38 @@ function KeywordSelectionPanel({
           </div>
           <div className="space-y-2">
             {selection.main.map((k, i) => (
-              <div key={i} className="grid grid-cols-[auto_minmax(0,1fr)_110px_110px_auto] gap-2 items-center rounded-lg border p-2">
-                <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateMain(i, { selected: e.target.checked })} className="size-4" aria-label={`Pilih ${k.keyword || "main keyword"}`} />
-                <Input value={k.keyword} placeholder="Main keyword" onChange={(e) => updateMain(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
-                <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global" inputMode="numeric" onChange={(e) => updateMain(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
-                <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia" inputMode="numeric" onChange={(e) => updateMain(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
-                <Button variant="ghost" size="icon" onClick={() => onChange({ ...selection, main: selection.main.filter((_, j) => j !== i) })}><Trash2 className="size-3.5" /></Button>
+              <div key={i} className="rounded-lg border p-2 space-y-2">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_110px_110px_auto] gap-2 items-center">
+                  <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateMain(i, { selected: e.target.checked })} className="size-4" aria-label={`Pilih ${k.keyword || "main keyword"}`} />
+                  <Input value={k.keyword} placeholder="Main keyword" onChange={(e) => updateMain(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
+                  <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global" inputMode="numeric" onChange={(e) => updateMain(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
+                  <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia" inputMode="numeric" onChange={(e) => updateMain(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
+                  <Button variant="ghost" size="icon" onClick={() => onChange({ ...selection, main: selection.main.filter((_, j) => j !== i) })}><Trash2 className="size-3.5" /></Button>
+                </div>
+                <KeywordVolumeCheckButton
+                  projectId={projectId}
+                  keyword={k.keyword}
+                  currentVolume={k.indonesiaVolume ?? k.globalVolume}
+                  onResult={async (row, geo) => {
+                    const isIndonesia = ["id", "indonesia"].includes(geo.trim().toLowerCase());
+                    const nextMain = selection.main.map((item, index) =>
+                      index === i
+                        ? { ...item, ...(isIndonesia ? { indonesiaVolume: row.volume } : { globalVolume: row.volume }) }
+                        : item,
+                    );
+                    const nextSelection = { ...selection, main: nextMain };
+                    onChange(nextSelection);
+                    if (savedId) {
+                      await updateHistoryFn({
+                        data: {
+                          id: savedId,
+                          main_keywords: nextMain,
+                          secondary_keywords: selection.secondary,
+                        },
+                      });
+                    }
+                  }}
+                />
               </div>
             ))}
           </div>
@@ -936,12 +1090,38 @@ function KeywordSelectionPanel({
           </div>
           <div className="space-y-2">
             {selection.secondary.map((k, i) => (
-              <div key={i} className="grid grid-cols-[auto_minmax(0,1fr)_110px_110px_auto] gap-2 items-center rounded-lg border p-2">
-                <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateSecondary(i, { selected: e.target.checked })} className="size-4" aria-label={`Pilih ${k.keyword || "secondary keyword"}`} />
-                <Input value={k.keyword} placeholder="Secondary keyword" onChange={(e) => updateSecondary(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
-                <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global" inputMode="numeric" onChange={(e) => updateSecondary(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
-                <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia" inputMode="numeric" onChange={(e) => updateSecondary(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
-                <Button variant="ghost" size="icon" onClick={() => onChange({ ...selection, secondary: selection.secondary.filter((_, j) => j !== i) })}><Trash2 className="size-3.5" /></Button>
+              <div key={i} className="rounded-lg border p-2 space-y-2">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_110px_110px_auto] gap-2 items-center">
+                  <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateSecondary(i, { selected: e.target.checked })} className="size-4" aria-label={`Pilih ${k.keyword || "secondary keyword"}`} />
+                  <Input value={k.keyword} placeholder="Secondary keyword" onChange={(e) => updateSecondary(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
+                  <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global" inputMode="numeric" onChange={(e) => updateSecondary(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
+                  <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia" inputMode="numeric" onChange={(e) => updateSecondary(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
+                  <Button variant="ghost" size="icon" onClick={() => onChange({ ...selection, secondary: selection.secondary.filter((_, j) => j !== i) })}><Trash2 className="size-3.5" /></Button>
+                </div>
+                <KeywordVolumeCheckButton
+                  projectId={projectId}
+                  keyword={k.keyword}
+                  currentVolume={k.indonesiaVolume ?? k.globalVolume}
+                  onResult={async (row, geo) => {
+                    const isIndonesia = ["id", "indonesia"].includes(geo.trim().toLowerCase());
+                    const nextSecondary = selection.secondary.map((item, index) =>
+                      index === i
+                        ? { ...item, ...(isIndonesia ? { indonesiaVolume: row.volume } : { globalVolume: row.volume }) }
+                        : item,
+                    );
+                    const nextSelection = { ...selection, secondary: nextSecondary };
+                    onChange(nextSelection);
+                    if (savedId) {
+                      await updateHistoryFn({
+                        data: {
+                          id: savedId,
+                          main_keywords: selection.main,
+                          secondary_keywords: nextSecondary,
+                        },
+                      });
+                    }
+                  }}
+                />
               </div>
             ))}
           </div>
