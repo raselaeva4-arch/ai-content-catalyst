@@ -847,8 +847,6 @@ function KeywordSelectionPanel({
     setTitleText(selection.selectedTitle);
   }, [result, selection.main, selection.secondary, selection.selectedTitle]);
 
-  const [volumeByGeo, setVolumeByGeo] = useState<Record<string, VolumeRow[]>>({});
-
   const updateMain = (index: number, patch: Partial<KeywordSelection["main"][number]>) => {
     onChange({ ...selection, main: selection.main.map((k, i) => i === index ? { ...k, ...patch } : k) });
   };
@@ -880,7 +878,6 @@ function KeywordSelectionPanel({
 
   const allKeywords = Array.from(new Set([...selection.main.map((k) => k.keyword), ...selection.secondary.map((k) => k.keyword)].filter(Boolean)));
   const handleVolumeResults = useCallback((rows: VolumeRow[], geo: string) => {
-    setVolumeByGeo((prev) => ({ ...prev, [geo || "global"]: rows }));
     const key = geo || "global";
     onChange({
       ...selection,
