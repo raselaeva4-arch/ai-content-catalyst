@@ -1078,19 +1078,22 @@ function KeywordSelectionPanel({
                 <div className="flex flex-wrap items-center gap-2">
                   <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateMain(i, { selected: e.target.checked })} className="size-4 shrink-0" aria-label={`Pilih ${k.keyword || "main keyword"}`} />
                   <Input className="min-w-[180px] flex-1" value={k.keyword} placeholder="Main keyword" onChange={(e) => updateMain(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-9 shrink-0 gap-1.5 border-primary/40 text-primary"
-                    onClick={() => {
-                      const event = new Event("toggle-keyword-volume");
-                      window.dispatchEvent(event);
+                  <KeywordVolumeCheckButton
+                    projectId={projectId}
+                    keyword={k.keyword}
+                    currentVolume={k.indonesiaVolume ?? k.globalVolume}
+                    onResult={async (row, geo) => {
+                      const isIndonesia = ["id", "indonesia"].includes(geo.trim().toLowerCase());
+                      const nextMain = selection.main.map((item, index) =>
+                        index === i
+                          ? { ...item, ...(isIndonesia ? { indonesiaVolume: row.volume } : { globalVolume: row.volume }) }
+                          : item,
+                      );
+                      const nextSelection = { ...selection, main: nextMain };
+                      onChange(nextSelection);
+                      await persistVolumeSelection?.(nextSelection);
                     }}
-                  >
-                    <BarChart3 className="size-3.5" />
-                    Check Volume
-                  </Button>
+                  />
                   <Button variant="ghost" size="icon" onClick={() => onChange({ ...selection, main: selection.main.filter((_, j) => j !== i) })}><Trash2 className="size-3.5" /></Button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
@@ -1131,19 +1134,22 @@ function KeywordSelectionPanel({
                 <div className="flex flex-wrap items-center gap-2">
                   <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateSecondary(i, { selected: e.target.checked })} className="size-4 shrink-0" aria-label={`Pilih ${k.keyword || "secondary keyword"}`} />
                   <Input className="min-w-[180px] flex-1" value={k.keyword} placeholder="Secondary keyword" onChange={(e) => updateSecondary(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-9 shrink-0 gap-1.5 border-primary/40 text-primary"
-                    onClick={() => {
-                      const event = new Event("toggle-keyword-volume");
-                      window.dispatchEvent(event);
+                  <KeywordVolumeCheckButton
+                    projectId={projectId}
+                    keyword={k.keyword}
+                    currentVolume={k.indonesiaVolume ?? k.globalVolume}
+                    onResult={async (row, geo) => {
+                      const isIndonesia = ["id", "indonesia"].includes(geo.trim().toLowerCase());
+                      const nextSecondary = selection.secondary.map((item, index) =>
+                        index === i
+                          ? { ...item, ...(isIndonesia ? { indonesiaVolume: row.volume } : { globalVolume: row.volume }) }
+                          : item,
+                      );
+                      const nextSelection = { ...selection, secondary: nextSecondary };
+                      onChange(nextSelection);
+                      await persistVolumeSelection?.(nextSelection);
                     }}
-                  >
-                    <BarChart3 className="size-3.5" />
-                    Check Volume
-                  </Button>
+                  />
                   <Button variant="ghost" size="icon" onClick={() => onChange({ ...selection, secondary: selection.secondary.filter((_, j) => j !== i) })}><Trash2 className="size-3.5" /></Button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
