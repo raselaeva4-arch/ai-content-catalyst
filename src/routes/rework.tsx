@@ -539,7 +539,7 @@ function ReworkPage() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <h1 className="text-sm font-semibold">AI Article Rework Studio</h1>
         </div>
-      </header>>
+      </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

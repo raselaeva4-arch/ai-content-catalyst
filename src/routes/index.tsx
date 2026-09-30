@@ -473,7 +473,7 @@ function Dashboard() {
       <Toaster richColors position="top-right" />
 
       {/* Header */}
->
+
 
       <main className="max-w-6xl mx-auto px-6 py-8 grid lg:grid-cols-[1fr_360px] gap-6">
         {/* Left: Input + Results */}
