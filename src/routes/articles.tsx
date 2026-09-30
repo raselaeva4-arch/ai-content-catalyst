@@ -53,6 +53,7 @@ import { listKb } from "@/lib/kb.functions";
 import { KnowledgeBaseList, type KnowledgeBaseItem } from "@/components/knowledge-base-list";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { HtmlExportDialog } from "@/components/html-export-dialog";
+import { RichArticleEditor, copyRichTextFromHtml, markdownToRichHtml } from "@/components/rich-article-editor";
 
 
 function ErrorComponent({ error, reset }: { error: any; reset: () => void }) {
@@ -141,19 +142,6 @@ type ImportTranscriptItem = {
 };
 
 type ImportMode = "topic" | "main" | "secondary" | "title";
-
-function ArticlePreview({ markdown }: { markdown: string }) {
-  const blocks = useMemo(() => markdown.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean), [markdown]);
-  return (
-    <article className="space-y-4">
-      {blocks.map((b, i) => {
-        if (b.startsWith("## ")) return <h2 key={i} className="text-lg font-semibold tracking-tight pt-2">{b.slice(3)}</h2>;
-        if (b.startsWith("# ")) return <h1 key={i} className="text-2xl font-bold tracking-tight">{b.slice(2)}</h1>;
-        return <p key={i} className="text-sm leading-7 text-foreground/90">{b}</p>;
-      })}
-    </article>
-  );
-}
 
 function ArticlesPage() {
   const { projectId, mounted } = useActiveProject();
@@ -545,8 +533,20 @@ function ArticlesPage() {
                   {editingId && <Badge variant="outline">Mode edit</Badge>}
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(draft.content); toast.success("Artikel disalin."); }}>
-                    <Copy className="size-3.5 mr-1.5" />Salin
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await copyRichTextFromHtml(markdownToRichHtml(draft.content));
+                        toast.success("Artikel disalin dengan format rich text.");
+                      } catch {
+                        await navigator.clipboard.writeText(draft.content);
+                        toast.success("Artikel disalin sebagai teks.");
+                      }
+                    }}
+                  >
+                    <Copy className="size-3.5 mr-1.5" />Salin Rich Text
                   </Button>
                   <HtmlExportDialog article={draft} />
                   <Button size="sm" onClick={onSave} disabled={saving}>
@@ -595,13 +595,27 @@ function ArticlesPage() {
               )}
 
               <div className="space-y-2">
-                <Label>Isi Artikel (Markdown)</Label>
-                <Textarea rows={18} value={draft.content} onChange={(e) => setDraft({ ...draft, content: e.target.value })} className="font-mono text-xs leading-6" />
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Isi Artikel — Rich Text</Label>
+                  <span className="text-[10px] text-muted-foreground">Format visual akan ikut saat Copy ke Google Docs / Word</span>
+                </div>
+                <RichArticleEditor
+                  value={draft.content}
+                  onChange={(content) => setDraft({ ...draft, content })}
+                  minHeight={520}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Gunakan toolbar seperti Google Docs untuk heading, bold, italic, underline, list, quote, link, alignment, undo/redo, dan hapus format.
+                  Paste langsung dari Google Docs juga akan dipertahankan sebagai rich text.
+                </p>
               </div>
 
               <div className="border-t pt-5">
-                <p className="text-xs font-medium text-muted-foreground mb-3">Preview</p>
-                <ArticlePreview markdown={draft.content} />
+                <p className="text-xs font-medium text-muted-foreground mb-3">Preview Artikel</p>
+                <article
+                  className="prose prose-sm max-w-none leading-7 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_p]:my-3 [&_ul]:my-3 [&_ol]:my-3 [&_li]:my-1 [&_blockquote]:border-l-4 [&_blockquote]:pl-4 [&_blockquote]:italic"
+                  dangerouslySetInnerHTML={{ __html: markdownToRichHtml(draft.content) }}
+                />
               </div>
             </Card>
           )}
