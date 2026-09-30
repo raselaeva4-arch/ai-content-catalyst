@@ -91,20 +91,20 @@ export const checkVolume = createServerFn({ method: "POST" })
       .select("id")
       .single();
 
-    const authCheck = await fetch(`${APIFY_API_URL}/users/me`, {
-      headers: { Authorization: `Bearer ${apifyKey}` },
+    const authCheck = await fetch(`${GATEWAY_URL}/users/me`, {
+      headers: gatewayHeaders,
     });
     if (!authCheck.ok) {
       const authBody = await authCheck.text();
-      const authMsg = `Token Apify tidak valid atau sudah kedaluwarsa (${authCheck.status}). Buat/rotasi token di Apify lalu set sebagai APIFY_API_KEY di server.`;
+      const authMsg = `Koneksi Apify gagal diverifikasi (${authCheck.status}). Coba hubungkan ulang konektor Apify di pengaturan proyek.`;
       console.error(`Apify authentication failed [${authCheck.status}]: ${authBody.slice(0, 300)}`);
       if (row?.id) await context.supabase.from("keyword_volume_checks").update({ status: "error", error: authMsg }).eq("id", row.id);
       throw new Error(authMsg);
     }
-    const res = await fetch(`${APIFY_API_URL}/acts/${ACTOR_ID}/run-sync-get-dataset-items?timeout=280`, {
+    const res = await fetch(`${GATEWAY_URL}/acts/${ACTOR_ID}/run-sync-get-dataset-items?timeout=280`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apifyKey}`,
+        ...gatewayHeaders,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
@@ -114,7 +114,7 @@ export const checkVolume = createServerFn({ method: "POST" })
       const body = await res.text();
       console.error(`Apify request failed [${res.status}]: ${body}`);
       const msg = res.status === 401
-        ? "Apify menolak autentikasi (401). Periksa APIFY_API_KEY di server dan pastikan token belum expired/ter-rotate."
+        ? "Apify menolak autentikasi (401). Hubungkan ulang konektor Apify di pengaturan proyek."
         : `Apify error ${res.status}: ${body.slice(0, 300)}`;
       if (row?.id) await context.supabase.from("keyword_volume_checks").update({ status: "error", error: msg }).eq("id", row.id);
       throw new Error(msg);
