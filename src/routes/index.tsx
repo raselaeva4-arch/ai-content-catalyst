@@ -661,7 +661,7 @@ function Dashboard() {
                     <p className="text-sm font-medium">Ambil dari Riwayat Transkrip</p>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Pilih transkrip yang sudah tersimpan di halaman <Link to="/transcripts" className="text-primary hover:underline">Transcripts</Link>. Isinya akan dimasukkan ke Notes dan ikut dianalisis.
+                    Pilih transkrip <Link to="/transcripts" className="text-primary hover:underline">Transcripts</Link>. Isinya akan dimasukkan ke Notes dan ikut dianalisis.
                   </p>
                 </div>
                 <div className="flex justify-end">
