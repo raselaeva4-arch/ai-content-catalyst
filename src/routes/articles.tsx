@@ -3,7 +3,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { toast, Toaster } from "sonner";
 import {
-  ArrowLeft,
   FileText,
   Loader2,
   Save,
