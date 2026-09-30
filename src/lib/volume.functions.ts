@@ -60,10 +60,15 @@ export const checkVolume = createServerFn({ method: "POST" })
   .middleware([publicAccess])
   .inputValidator((d) => InputSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const apifyKey = process.env.APIFY_API_KEY ?? process.env.APIFY_TOKEN;
-    if (!apifyKey) {
-      throw new Error("APIFY_API_KEY belum dikonfigurasi di server. Tambahkan API token Apify sebagai secret server, bukan di frontend.");
+    const apifyKey = process.env.APIFY_API_KEY;
+    const lovableKey = process.env.LOVABLE_API_KEY;
+    if (!apifyKey || !lovableKey) {
+      throw new Error("Koneksi Apify belum terhubung. Hubungkan konektor Apify ke proyek ini.");
     }
+    const gatewayHeaders = {
+      Authorization: `Bearer ${lovableKey}`,
+      "X-Connection-Api-Key": apifyKey,
+    };
 
     const keywords = Array.from(new Set(data.keywords.map((k) => k.toLowerCase())));
     const input: Record<string, string | number | boolean | string[]> = {
