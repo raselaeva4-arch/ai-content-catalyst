@@ -67,7 +67,7 @@ function ProjectsPage() {
       <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link to="/"><Button variant="ghost" size="icon"><ArrowLeft className="size-4" /></Button></Link>
+
             <div className="size-9 rounded-lg flex items-center justify-center text-primary-foreground" style={{ background: "var(--gradient-brand)" }}>
               <FolderKanban className="size-5" />
             </div>
