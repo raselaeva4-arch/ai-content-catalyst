@@ -11,7 +11,6 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { listHistory, updateHistory, deleteHistory } from "@/lib/history.functions";
 import { useActiveProject } from "@/hooks/use-active-project";
-import { ProjectSwitcher } from "@/components/project-switcher";
 
 function HistoryErrorComponent({ error, reset }: { error: any; reset: () => void }) {
   return (
@@ -104,8 +103,6 @@ function HistoryPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <ProjectSwitcher />
-            <Link to="/"><Button variant="outline" size="sm">+ Generate Baru</Button></Link>
           </div>
         </div>
       </header>
