@@ -1074,13 +1074,28 @@ function KeywordSelectionPanel({
           </div>
           <div className="space-y-2">
             {selection.main.map((k, i) => (
-              <div key={i} className="rounded-lg border p-2 space-y-2">
-                <div className="grid grid-cols-[auto_minmax(0,1fr)_110px_110px_auto] gap-2 items-center">
-                  <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateMain(i, { selected: e.target.checked })} className="size-4" aria-label={`Pilih ${k.keyword || "main keyword"}`} />
-                  <Input value={k.keyword} placeholder="Main keyword" onChange={(e) => updateMain(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
-                  <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global" inputMode="numeric" onChange={(e) => updateMain(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
-                  <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia" inputMode="numeric" onChange={(e) => updateMain(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
+              <div key={i} className="rounded-lg border p-2.5 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateMain(i, { selected: e.target.checked })} className="size-4 shrink-0" aria-label={`Pilih ${k.keyword || "main keyword"}`} />
+                  <Input className="min-w-[180px] flex-1" value={k.keyword} placeholder="Main keyword" onChange={(e) => updateMain(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 shrink-0 gap-1.5 border-primary/40 text-primary"
+                    onClick={() => {
+                      const event = new Event("toggle-keyword-volume");
+                      window.dispatchEvent(event);
+                    }}
+                  >
+                    <BarChart3 className="size-3.5" />
+                    Check Volume
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => onChange({ ...selection, main: selection.main.filter((_, j) => j !== i) })}><Trash2 className="size-3.5" /></Button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
+                  <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global Volume" inputMode="numeric" onChange={(e) => updateMain(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
+                  <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia Volume" inputMode="numeric" onChange={(e) => updateMain(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
                 </div>
                 <KeywordVolumeCheckButton
                   projectId={projectId}
@@ -1112,13 +1127,28 @@ function KeywordSelectionPanel({
           </div>
           <div className="space-y-2">
             {selection.secondary.map((k, i) => (
-              <div key={i} className="rounded-lg border p-2 space-y-2">
-                <div className="grid grid-cols-[auto_minmax(0,1fr)_110px_110px_auto] gap-2 items-center">
-                  <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateSecondary(i, { selected: e.target.checked })} className="size-4" aria-label={`Pilih ${k.keyword || "secondary keyword"}`} />
-                  <Input value={k.keyword} placeholder="Secondary keyword" onChange={(e) => updateSecondary(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
-                  <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global" inputMode="numeric" onChange={(e) => updateSecondary(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
-                  <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia" inputMode="numeric" onChange={(e) => updateSecondary(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
+              <div key={i} className="rounded-lg border p-2.5 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input type="checkbox" checked={k.selected !== false} onChange={(e) => updateSecondary(i, { selected: e.target.checked })} className="size-4 shrink-0" aria-label={`Pilih ${k.keyword || "secondary keyword"}`} />
+                  <Input className="min-w-[180px] flex-1" value={k.keyword} placeholder="Secondary keyword" onChange={(e) => updateSecondary(i, { keyword: e.target.value, globalVolume: null, indonesiaVolume: null })} />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 shrink-0 gap-1.5 border-primary/40 text-primary"
+                    onClick={() => {
+                      const event = new Event("toggle-keyword-volume");
+                      window.dispatchEvent(event);
+                    }}
+                  >
+                    <BarChart3 className="size-3.5" />
+                    Check Volume
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => onChange({ ...selection, secondary: selection.secondary.filter((_, j) => j !== i) })}><Trash2 className="size-3.5" /></Button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input value={k.globalVolume == null ? "" : String(k.globalVolume)} placeholder="Global Volume" inputMode="numeric" onChange={(e) => updateSecondary(i, { globalVolume: e.target.value === "" ? null : Number(e.target.value) })} />
+                  <Input value={k.indonesiaVolume == null ? "" : String(k.indonesiaVolume)} placeholder="Indonesia Volume" inputMode="numeric" onChange={(e) => updateSecondary(i, { indonesiaVolume: e.target.value === "" ? null : Number(e.target.value) })} />
                 </div>
                 <KeywordVolumeCheckButton
                   projectId={projectId}
