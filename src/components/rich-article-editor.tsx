@@ -43,8 +43,8 @@ function inlineMarkdownToHtml(value: string) {
     return token;
   });
 
-  text = text.replace(/!\[([^\]]*)\]\((https?:\\/\\/[^\\s)]+)\)/g, '<img src="$2" alt="$1" />');
-  text = text.replace(/\[([^\]]+)\]\((https?:\\/\\/[^\\s)]+)\)/g, '<a href="$2">$1</a>');
+  text = text.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, '<img src="$2" alt="$1" />');
+  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>');
   text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   text = text.replace(/__([^_]+)__/g, "<strong>$1</strong>");
   text = text.replace(/~~([^~]+)~~/g, "<s>$1</s>");
@@ -163,7 +163,7 @@ export function markdownToRichHtml(markdown: string) {
       continue;
     }
 
-    const quote = trimmed.match(/^>\\s?(.*)$/);
+    const quote = trimmed.match(/^>\s?(.*)$/);
     if (quote) {
       flushParagraph();
       closeList();
@@ -171,7 +171,7 @@ export function markdownToRichHtml(markdown: string) {
       continue;
     }
 
-    const unordered = trimmed.match(/^[-*+]\\s+(.+)$/);
+    const unordered = trimmed.match(/^[-*+]\s+(.+)$/);
     if (unordered) {
       flushParagraph();
       if (listType !== "ul") {
@@ -183,7 +183,7 @@ export function markdownToRichHtml(markdown: string) {
       continue;
     }
 
-    const ordered = trimmed.match(/^\\d+[.)]\\s+(.+)$/);
+    const ordered = trimmed.match(/^\d+[.)]\s+(.+)$/);
     if (ordered) {
       flushParagraph();
       if (listType !== "ol") {
