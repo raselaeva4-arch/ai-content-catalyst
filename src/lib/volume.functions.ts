@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { publicAccess } from "@/lib/public-access";
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/apify/v2";
+const GATEWAY_URL = "https://connector-gateway.lovable.dev/apify";
 const ACTOR_ID = "aitorsm~keyword-volume";
 
 const InputSchema = z.object({
