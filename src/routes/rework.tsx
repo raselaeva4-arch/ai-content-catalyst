@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Upload, FileText, CheckCircle, ListChecks, RefreshCw, ArrowLeft, Loader2, Trash2, Save, CheckCircle2, Search, Plus, FileSearch, User, Bot, ExternalLink, Send, RotateCcw } from "lucide-react";
+import { Sparkles, Upload, FileText, CheckCircle, ListChecks, RefreshCw, Loader2, Trash2, Save, CheckCircle2, Search, Plus, FileSearch, User, Bot, ExternalLink, Send, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
