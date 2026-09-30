@@ -11,7 +11,7 @@ import { UserBadge } from "@/components/user-badge";
 
 type Project = { id: string; name: string };
 
-export function ProjectSwitcher() {
+export function ProjectSwitcher({ variant = "header" }: { variant?: "header" | "sidebar" }) {
   const navigate = useNavigate();
   const { projectId, setProjectId, mounted } = useActiveProject();
   const listFn = useServerFn(listProjects);
@@ -76,6 +76,52 @@ export function ProjectSwitcher() {
       >
         <FolderKanban className="size-3.5" /> Muat ulang project
       </Button>
+    );
+  }
+
+  if (variant === "sidebar") {
+    return (
+      <div className="w-full space-y-2">
+        <Select value={items.length ? projectId : undefined} onValueChange={setProjectId} disabled={loading}>
+          <SelectTrigger className="h-9 w-full min-w-0 text-xs">
+            {loading ? (
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="size-3 animate-spin" /> Memuat project…
+              </span>
+            ) : (
+              <span className="flex min-w-0 items-center gap-2">
+                <FolderKanban className="size-3.5 shrink-0 text-muted-foreground" />
+                <SelectValue placeholder="Pilih project" />
+              </span>
+            )}
+          </SelectTrigger>
+          <SelectContent>
+            {items.map((p) => (
+              <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex items-center gap-2 rounded-md border bg-background/60 px-2 py-1.5">
+          <UserBadge />
+          <Link to="/projects" className="ml-auto">
+            <Button variant="ghost" size="icon" className="size-7" title="Kelola Projects">
+              <Settings className="size-3.5" />
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            title="Keluar"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              navigate({ to: "/auth", search: { next: "/" }, replace: true });
+            }}
+          >
+            <LogOut className="size-3.5" />
+          </Button>
+        </div>
+      </div>
     );
   }
 
