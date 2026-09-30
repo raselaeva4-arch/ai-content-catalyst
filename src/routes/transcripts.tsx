@@ -15,7 +15,6 @@ import {
 } from "@/lib/transcripts.functions";
 import { transcribeUrl } from "@/lib/transcribe-url.functions";
 import { useActiveProject } from "@/hooks/use-active-project";
-import { ProjectSwitcher } from "@/components/project-switcher";
 
 type Item = {
   id: string;
@@ -101,7 +100,6 @@ function TranscriptsPage() {
       <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link to="/"><Button variant="ghost" size="icon"><ArrowLeft className="size-4" /></Button></Link>
             <div className="size-9 rounded-lg flex items-center justify-center text-primary-foreground" style={{ background: "var(--gradient-brand)" }}>
               <Mic className="size-5" />
             </div>
@@ -111,8 +109,6 @@ function TranscriptsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <ProjectSwitcher />
-            <Link to="/history"><Button variant="outline" size="sm">History Generate</Button></Link>
           </div>
         </div>
       </header>
