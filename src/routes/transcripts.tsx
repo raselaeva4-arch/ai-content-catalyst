@@ -299,6 +299,34 @@ function TranscriptCard({ item, editing, onEdit, onCancel, onSave, onDelete }: {
   const [title, setTitle] = useState(item.title);
   const [transcript, setTranscript] = useState(item.transcript);
   const [notes, setNotes] = useState(item.notes ?? "");
+  const [titleEditing, setTitleEditing] = useState(false);
+  const [titleSaving, setTitleSaving] = useState(false);
+
+  useEffect(() => {
+    setTitle(item.title);
+    setTranscript(item.transcript);
+    setNotes(item.notes ?? "");
+    setTitleEditing(false);
+  }, [item.id, item.title, item.transcript, item.notes]);
+
+  const saveTitle = async () => {
+    const nextTitle = title.trim();
+    if (!nextTitle) {
+      toast.error("Judul tidak boleh kosong.");
+      return;
+    }
+    if (nextTitle === item.title) {
+      setTitleEditing(false);
+      return;
+    }
+    setTitleSaving(true);
+    try {
+      await onSave({ title: nextTitle });
+      setTitleEditing(false);
+    } finally {
+      setTitleSaving(false);
+    }
+  };
 
   if (editing) {
     return (
@@ -333,7 +361,56 @@ function TranscriptCard({ item, editing, onEdit, onCancel, onSave, onDelete }: {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <PlatformIcon className="size-4 text-primary shrink-0" />
-            <h3 className="font-semibold leading-tight truncate">{item.title}</h3>
+            {titleEditing ? (
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <Input
+                  autoFocus
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void saveTitle();
+                    }
+                    if (e.key === "Escape") {
+                      setTitle(item.title);
+                      setTitleEditing(false);
+                    }
+                  }}
+                  className="h-8 min-w-[220px] max-w-[520px] font-semibold"
+                  aria-label="Edit judul transkrip"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8"
+                  title="Simpan judul"
+                  disabled={titleSaving}
+                  onClick={() => void saveTitle()}
+                >
+                  {titleSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8"
+                  title="Batal edit judul"
+                  disabled={titleSaving}
+                  onClick={() => { setTitle(item.title); setTitleEditing(false); }}
+                >
+                  <X className="size-4" />
+                </Button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="font-semibold leading-tight truncate text-left hover:text-primary hover:underline underline-offset-2"
+                title="Klik untuk edit judul"
+                onClick={() => setTitleEditing(true)}
+              >
+                {item.title}
+              </button>
+            )}
             {item.platform && <Badge variant="outline" className="text-[10px] capitalize">{item.platform}</Badge>}
             <Badge variant="secondary" className="text-[10px]">{item.transcript.length} chars</Badge>
           </div>
