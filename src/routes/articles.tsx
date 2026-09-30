@@ -51,7 +51,6 @@ import {
 import { useActiveProject } from "@/hooks/use-active-project";
 import { listKb } from "@/lib/kb.functions";
 import { KnowledgeBaseList, type KnowledgeBaseItem } from "@/components/knowledge-base-list";
-import { ProjectSwitcher } from "@/components/project-switcher";
 import { HtmlExportDialog } from "@/components/html-export-dialog";
 import { RichArticleEditor, copyRichTextFromHtml, markdownToRichHtml } from "@/components/rich-article-editor";
 
@@ -400,8 +399,7 @@ function ArticlesPage() {
       <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-10">
         <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <Link to="/"><Button variant="ghost" size="icon" className="size-8 shrink-0"><ArrowLeft className="size-4" /></Button></Link>
-            <div className="hidden size-9 shrink-0 items-center justify-center rounded-lg text-primary-foreground sm:flex" style={{ background: "var(--gradient-brand)" }}>
+                        <div className="hidden size-9 shrink-0 items-center justify-center rounded-lg text-primary-foreground sm:flex" style={{ background: "var(--gradient-brand)" }}>
               <FileText className="size-5" />
             </div>
             <div className="min-w-0">
@@ -410,8 +408,6 @@ function ArticlesPage() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <ProjectSwitcher />
-            <Link to="/history"><Button variant="outline" size="sm" className="hidden h-8 sm:inline-flex">History</Button></Link>
           </div>
         </div>
       </header>
