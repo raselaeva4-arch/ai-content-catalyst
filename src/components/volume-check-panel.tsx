@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { BarChart3, Loader2, History, Download } from "lucide-react";
+import { BarChart3, Loader2, History, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,6 +27,7 @@ export function VolumeCheckPanel({ projectId, keywords, onResults }: Props) {
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<VolumeRow[] | null>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [open, setOpen] = useState(true);
 
   useEffect(() => {
     setKwText((prev) => {
@@ -70,6 +71,7 @@ export function VolumeCheckPanel({ projectId, keywords, onResults }: Props) {
       onResults?.(r.results, geo);
       toast.success(`${r.results.length} keyword berhasil dicek`);
       loadHistory();
+      setOpen(false);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -91,10 +93,19 @@ export function VolumeCheckPanel({ projectId, keywords, onResults }: Props) {
   return (
     <section className="rounded-lg border bg-muted/30 p-4 space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold flex items-center gap-2"><BarChart3 className="size-4" />Check Volume Search</h3>
-        <span className="text-xs text-muted-foreground">Google Keyword Planner via Apify</span>
+        <div>
+          <h3 className="text-sm font-semibold flex items-center gap-2"><BarChart3 className="size-4" />Check Volume Search</h3>
+          {!open && <p className="text-xs text-muted-foreground mt-0.5">Panel tertutup setelah pengecekan. Hasil sudah diterapkan ke Output.</p>}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground hidden sm:inline">Google Keyword Planner via Apify</span>
+          <Button type="button" size="sm" variant="outline" onClick={() => setOpen((value) => !value)}>
+            {open ? <><ChevronUp className="size-3.5 mr-1.5" />Tutup</> : <><ChevronDown className="size-3.5 mr-1.5" />Check Volume</>}
+          </Button>
+        </div>
       </div>
 
+      {open && (
       <div className="grid gap-3 md:grid-cols-2">
         <div className="md:col-span-2 space-y-1">
           <label className="text-xs font-medium">Keywords (satu per baris) — {kwText.split("\n").filter((s) => s.trim()).length} keyword</label>
@@ -138,9 +149,11 @@ export function VolumeCheckPanel({ projectId, keywords, onResults }: Props) {
         </div>
       </div>
 
-      <Button className="w-full" onClick={onRun} disabled={loading}>
+      {open &&       <Button className="w-full" onClick={onRun} disabled={loading}>
         {loading ? <><Loader2 className="size-4 mr-2 animate-spin" />Mengecek volume… (bisa 1–3 menit)</> : <><BarChart3 className="size-4 mr-2" />Check Volume Search</>}
-      </Button>
+      </Button>}
+
+      )}
 
       {sorted && (
         <div className="space-y-2">
