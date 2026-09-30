@@ -12,7 +12,7 @@ const InputSchema = z.object({
   maxIdeas: z.number().int().min(1).max(10000).default(100),
   geo: z.string().trim().max(60).default(""),
   language: z.string().trim().max(60).default(""),
-  network: z.enum(["GOOGLE_SEARCH", "GOOGLE_SEARCH_AND_PARTNERS"]).default("GOOGLE_SEARCH"),
+  network: z.enum(["GOOGLE_SEARCH", "GOOGLE_SEARCH_AND_PARTNERS"]).default("GOOGLE_SEARCH_AND_PARTNERS"),
   aiVolume: z.boolean().default(false),
   includeAdultKeywords: z.boolean().default(false),
 });
