@@ -511,6 +511,7 @@ function ArticlesPage() {
                 onUpdated={(updated) => setKnowledgeBase((rows) => rows.map((row) => row.id === updated.id ? { ...row, ...updated } : row))}
                 emptyText="Belum ada Knowledge Base. Tambahkan file/knowledge di Dashboard sebelum generate artikel."
               />
+            )}
           </div>
 
           <div className="space-y-2">
