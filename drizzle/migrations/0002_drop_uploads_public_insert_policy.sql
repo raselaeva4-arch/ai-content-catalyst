@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS uploads_public_insert ON storage.objects;
